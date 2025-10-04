@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth-context";
 import { LoginModal } from "@/components/ui/login-modal";
 import { useState, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
+import { v4 as uuidv4 } from "uuid"; // Import UUID library
 
 // Type for cart items
 interface CartItem {
@@ -42,6 +43,8 @@ export default function CartPage() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [phone, setPhone] = useState(""); // State for phone
+  const [address, setAddress] = useState(""); // State for address
 
   const updateQuantity = (id: string, newQuantity: number) => {
     if (newQuantity <= 0) {
@@ -73,10 +76,14 @@ export default function CartPage() {
   const handleConfirmPayment = async () => {
     setIsSubmitting(true);
     try {
+      const orderId = uuidv4(); // Generate a unique ID for the order
       const { error } = await supabase.from("orders").insert({
+        id: orderId, // Use the generated ID
         user_id: authState && authState.user ? authState.user.id : "",
         items: state.items,
         total: totalPrice,
+        phone, // Include phone
+        address, // Include address
         status: "pending",
       });
 
@@ -249,6 +256,37 @@ export default function CartPage() {
                 ₮{totalPrice.toLocaleString()}
               </span>
             </div>
+
+            {/* Phone Input */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Утасны дугаар
+              </label>
+              <input
+                type="text"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                placeholder="Утасны дугаар"
+                required
+              />
+            </div>
+
+            {/* Address Input */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Хаяг
+              </label>
+              <textarea
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                placeholder="Хүргэлтийн хаяг"
+                rows={3}
+                required
+              />
+            </div>
+
             <div className="flex gap-3">
               <button
                 onClick={handleConfirmPayment}

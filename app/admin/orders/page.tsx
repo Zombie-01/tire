@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Eye, CreditCard as Edit, Package } from "lucide-react";
+import { Search, Eye, CreditCard as Edit, Package, X } from "lucide-react";
 import { fetchOrders, fetchUsers } from "@/lib/supabase-config";
 
 export default function AdminOrdersPage() {
@@ -10,6 +10,7 @@ export default function AdminOrdersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -83,11 +84,12 @@ export default function AdminOrdersPage() {
   };
 
   const handleViewOrder = (orderId: string) => {
-    alert(`Захиалга харах: ${orderId}`);
+    const order = orders.find((o) => o.id === orderId);
+    setSelectedOrder(order);
   };
 
-  const handleEditOrder = (orderId: string) => {
-    alert(`Захиалга засах: ${orderId}`);
+  const handleCloseModal = () => {
+    setSelectedOrder(null);
   };
 
   if (isLoading) {
@@ -221,11 +223,6 @@ export default function AdminOrdersPage() {
                         className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors">
                         <Eye size={16} />
                       </button>
-                      <button
-                        onClick={() => handleEditOrder(order.id)}
-                        className="p-2 text-green-500 hover:bg-green-500/10 rounded-lg transition-colors">
-                        <Edit size={16} />
-                      </button>
                     </div>
                   </td>
                 </tr>
@@ -238,6 +235,81 @@ export default function AdminOrdersPage() {
       {filteredOrders.length === 0 && (
         <div className="text-center py-12">
           <p className="text-muted-foreground text-lg">Захиалга олдсонгүй</p>
+        </div>
+      )}
+
+      {/* Order Details Modal */}
+      {selectedOrder && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-card rounded-lg border border-border w-full max-w-lg p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-foreground">
+                Захиалгын дэлгэрэнгүй
+              </h3>
+              <button
+                onClick={handleCloseModal}
+                className="text-muted-foreground hover:text-foreground">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Захиалгын дугаар:
+                </p>
+                <p className="font-medium text-foreground">
+                  {selectedOrder.id}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Хэрэглэгч:</p>
+                <p className="font-medium text-foreground">
+                  {getUserById(selectedOrder.user_id)?.name || "Unknown User"}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {getUserById(selectedOrder.user_id)?.email || "No email"}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Утасны дугаар:</p>
+                <p className="font-medium text-foreground">
+                  {selectedOrder.phone || "Байхгүй"}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Хаяг:</p>
+                <p className="font-medium text-foreground">
+                  {selectedOrder.address || "Байхгүй"}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Бараанууд:</p>
+                <ul className="list-disc list-inside text-foreground">
+                  {selectedOrder.items.map((item: any, index: number) => (
+                    <li key={index}>
+                      {item.name} - {item.quantity} ширхэг - ₮
+                      {(item.price * item.quantity).toLocaleString()}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Нийт дүн:</p>
+                <p className="font-bold text-foreground">
+                  ₮{selectedOrder.total.toLocaleString()}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Төлөв:</p>
+                <span
+                  className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                    selectedOrder.status
+                  )}`}>
+                  {getStatusText(selectedOrder.status)}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

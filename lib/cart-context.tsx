@@ -36,13 +36,16 @@ const CartContext = createContext<{
 function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
     case "ADD_ITEM": {
+      const payloadItems = Array.isArray(action.payload)
+        ? action.payload
+        : [action.payload];
       const existingItem = state.items.find(
-        (item) => item.id === action.payload[0].id
+        (item) => item.id === payloadItems[0].id
       );
 
       if (existingItem) {
         const updatedItems = state.items.map((item) =>
-          item.id === action.payload[0]   .id
+          item.id === payloadItems[0].id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
@@ -56,7 +59,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       } else {
         const newItems = [
           ...state.items,
-          ...action.payload.map((item) => ({ ...item, quantity: 1 })),
+          ...payloadItems.map((item) => ({ ...item, quantity: 1 })),
         ];
         return {
           items: newItems,
