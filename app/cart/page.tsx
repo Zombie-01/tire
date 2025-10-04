@@ -7,6 +7,7 @@ import { useCart } from "@/lib/cart-context";
 import { useAuth } from "@/lib/auth-context";
 import { LoginModal } from "@/components/ui/login-modal";
 import { useState, useMemo } from "react";
+import { supabase } from "@/lib/supabase";
 
 // Type for cart items
 interface CartItem {
@@ -39,6 +40,8 @@ export default function CartPage() {
   const { state, dispatch } = useCart();
   const { state: authState } = useAuth();
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const updateQuantity = (id: string, newQuantity: number) => {
     if (newQuantity <= 0) {
@@ -66,6 +69,32 @@ export default function CartPage() {
       state.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
     [state.items]
   );
+
+  const handleConfirmPayment = async () => {
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.from("orders").insert({
+        user_id: authState && authState.user ? authState.user.id : "",
+        items: state.items,
+        total: totalPrice,
+        status: "pending",
+      });
+
+      if (error) {
+        console.error("Error creating order:", error);
+        alert("Захиалга үүсгэхэд алдаа гарлаа.");
+      } else {
+        alert("Захиалга амжилттай үүслээ. Бид удахгүй тантай холбогдох болно.");
+        dispatch({ type: "CLEAR_CART" });
+        setShowPaymentModal(false);
+      }
+    } catch (err) {
+      console.error("Error:", err);
+      alert("Алдаа гарлаа. Дахин оролдоно уу.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // Empty cart UI
   if (state.items.length === 0) {
@@ -190,7 +219,7 @@ export default function CartPage() {
               if (!authState.isAuthenticated) {
                 setShowLoginModal(true);
               } else {
-                alert("Төлбөр тооцооны систем одоохондоо бэлэн биш байна");
+                setShowPaymentModal(true);
               }
             }}
             className="w-full bg-yellow-500 text-black py-4 rounded-lg font-semibold hover:bg-yellow-400 transition-colors">
@@ -199,12 +228,48 @@ export default function CartPage() {
         </div>
       </div>
 
+      {/* Payment Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-card rounded-lg border border-border w-full max-w-md p-6">
+            <h3 className="text-lg font-semibold text-foreground mb-4">
+              Төлбөрийн мэдээлэл
+            </h3>
+            <p className="text-sm text-muted-foreground mb-2">
+              Та доорх данс руу нийт үнийн дүнг шилжүүлнэ үү:
+            </p>
+            <div className="bg-muted rounded-lg p-4 mb-4">
+              <p className="font-medium text-foreground">Хаан Банк</p>
+              <p className="text-sm text-muted-foreground">Данс: 1234567890</p>
+              <p className="text-sm text-muted-foreground">Нэр: Түмэн-Дугуй</p>
+            </div>
+            <div className="flex justify-between text-muted-foreground mb-4">
+              <span>Нийт дүн:</span>
+              <span className="font-bold text-foreground">
+                ₮{totalPrice.toLocaleString()}
+              </span>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handleConfirmPayment}
+                disabled={isSubmitting}
+                className="flex-1 bg-yellow-500 text-black py-2 rounded-lg font-medium hover:bg-yellow-400 transition-colors disabled:bg-yellow-600 disabled:cursor-not-allowed">
+                {isSubmitting ? "Илгээж байна..." : "Төлбөрийг баталгаажуулах"}
+              </button>
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                className="flex-1 bg-muted text-foreground py-2 rounded-lg font-medium hover:bg-muted/80 transition-colors">
+                Цуцлах
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <LoginModal
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
-        onSuccess={() =>
-          alert("Төлбөр тооцооны систем одоохондоо бэлэн биш байна")
-        }
+        onSuccess={() => setShowPaymentModal(true)}
       />
     </div>
   );
