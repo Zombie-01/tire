@@ -1,3 +1,5 @@
+import { supabase } from "./supabase";
+
 // Supabase configuration - ready for tomorrow's integration
 // This file contains the structure and setup needed for Supabase integration
 
@@ -8,18 +10,18 @@ export interface SupabaseConfig {
 
 // Environment variables that will be needed for Supabase
 export const supabaseConfig: SupabaseConfig = {
-  url: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+  url: process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+  anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
 };
 
 // Database table names for Supabase
 export const TABLES = {
-  USERS: 'users',
-  BRANDS: 'brands', 
-  PRODUCTS: 'products',
-  ORDERS: 'orders',
-  BANNERS: 'banners',
-  SETTINGS: 'settings',
+  USERS: "users",
+  BRANDS: "brands",
+  PRODUCTS: "products",
+  ORDERS: "orders",
+  BANNERS: "banners",
+  SETTINGS: "settings",
 } as const;
 
 // SQL schema for Supabase tables (for tomorrow's setup)
@@ -127,3 +129,81 @@ SUPABASE INTEGRATION STEPS FOR TOMORROW:
 
 Current static data will be preserved until migration is complete.
 `;
+
+// Fetch all users
+export const fetchUsers = async () => {
+  const { data, error } = await supabase
+    .from("users")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) {
+    console.error("Error fetching users:", error);
+    return [];
+  }
+  return data;
+};
+
+// Fetch all brands
+export const fetchBrands = async () => {
+  const { data, error } = await supabase
+    .from("brands")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) {
+    console.error("Error fetching brands:", error);
+    return [];
+  }
+  return data;
+};
+
+// Fetch all products
+export const fetchProducts = async () => {
+  const { data, error } = await supabase
+    .from("products")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) {
+    console.error("Error fetching products:", error);
+    return [];
+  }
+  return data;
+};
+
+// Fetch all orders
+export const fetchOrders = async () => {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) {
+    console.error("Error fetching orders:", error);
+    return [];
+  }
+  return data;
+};
+
+// Fetch all banners
+export const fetchBanners = async () => {
+  const { data, error } = await supabase
+    .from("banners")
+    .select("*")
+    .order("order_index", { ascending: true });
+  if (error) {
+    console.error("Error fetching banners:", error);
+    return [];
+  }
+  return data;
+};
+
+// Fetch all settings
+export const fetchSettings = async () => {
+  const { data, error } = await supabase
+    .from("settings")
+    .select("*")
+    .order("updated_at", { ascending: false });
+  if (error) {
+    console.error("Error fetching settings:", error);
+    return [];
+  }
+  return data;
+};

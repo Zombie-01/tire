@@ -1,19 +1,48 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
-import { products, getBrandById } from '@/lib/database';
-import { useCart } from '@/lib/cart-context';
-import { useParams } from 'next/navigation';
+import { useState, useEffect } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { useCart } from "@/lib/cart-context";
+import { useParams } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+
+// Fetch product by ID from Supabase
+const getProductById = async (id: string) => {
+  const { data: product, error } = await supabase
+    .from("products")
+    .select("*, brand:brands(*)")
+    .eq("id", id)
+    .single();
+
+  if (error) {
+    console.error("Error fetching product:", error);
+    return null;
+  }
+
+  return product;
+};
 
 export default function ProductDetailPage() {
+  const [product, setProduct] = useState<any>(null);
   const [isAdding, setIsAdding] = useState(false);
   const { dispatch } = useCart();
   const params = useParams<{ id: string }>();
-  const product = products.find((p) => p.id === params.id);
-  const brand = product ? getBrandById(product.brandId) : null;
+  console.log(params.id);
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      const fetchedProduct = await getProductById(params.id).then(
+        (fetchedProduct: any) => {
+          console.log(fetchedProduct);
+          setProduct(fetchedProduct);
+        }
+      );
+    };
+
+    fetchProduct();
+  }, [params.id]);
 
   if (!product) {
     return (
@@ -22,8 +51,7 @@ export default function ProductDetailPage() {
           <p className="text-muted-foreground text-lg">Бараа олдсонгүй</p>
           <Link
             href="/products"
-            className="inline-block mt-4 bg-yellow-500 text-black px-6 py-3 rounded-lg hover:bg-yellow-400 transition-colors font-semibold"
-          >
+            className="inline-block mt-4 bg-yellow-500 text-black px-6 py-3 rounded-lg hover:bg-yellow-400 transition-colors font-semibold">
             Бүх бараа руу буцах
           </Link>
         </div>
@@ -33,7 +61,7 @@ export default function ProductDetailPage() {
 
   const handleAddToCart = () => {
     setIsAdding(true);
-    dispatch({ type: 'ADD_ITEM', payload: product });
+    dispatch({ type: "ADD_ITEM", payload: [product] });
     setTimeout(() => setIsAdding(false), 1000);
   };
 
@@ -42,8 +70,7 @@ export default function ProductDetailPage() {
       {/* Back Button */}
       <Link
         href="/products"
-        className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-      >
+        className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
         <ArrowLeft size={20} />
         Буцах
       </Link>
@@ -59,12 +86,11 @@ export default function ProductDetailPage() {
         <div className="absolute top-4 right-4">
           <span
             className={`px-3 py-1 rounded-full text-sm font-medium ${
-              product.condition === 'new'
-                ? 'bg-yellow-500 text-black'
-                : 'bg-white text-black border border-gray-300'
-            }`}
-          >
-            {product.condition === 'new' ? 'Шинэ' : 'Хэрэглэсэн'}
+              product.condition === "new"
+                ? "bg-yellow-500 text-black"
+                : "bg-white text-black border border-gray-300"
+            }`}>
+            {product.condition === "new" ? "Шинэ" : "Хэрэглэсэн"}
           </span>
         </div>
       </div>
@@ -73,7 +99,7 @@ export default function ProductDetailPage() {
       <div className="bg-card rounded-lg border border-border p-6 space-y-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">
-            {brand?.name} {product.name}
+            {product.brand.name} {product.name}
           </h1>
           <p className="text-lg text-muted-foreground">{product.size}</p>
         </div>
@@ -83,7 +109,9 @@ export default function ProductDetailPage() {
         </div>
 
         <div className="border-t border-border pt-4">
-          <h3 className="text-lg font-semibold text-foreground mb-2">Тайлбар</h3>
+          <h3 className="text-lg font-semibold text-foreground mb-2">
+            Тайлбар
+          </h3>
           <p className="text-muted-foreground leading-relaxed">
             {product.description}
           </p>
@@ -97,7 +125,7 @@ export default function ProductDetailPage() {
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <span className="text-muted-foreground">Брэнд:</span>
-              <span className="ml-2 font-medium">{brand?.name}</span>
+              <span className="ml-2 font-medium">{product.brand.name}</span>
             </div>
             <div>
               <span className="text-muted-foreground">Хэмжээ:</span>
@@ -106,7 +134,7 @@ export default function ProductDetailPage() {
             <div>
               <span className="text-muted-foreground">Байдал:</span>
               <span className="ml-2 font-medium">
-                {product.condition === 'new' ? 'Шинэ' : 'Хэрэглэсэн'}
+                {product.condition === "new" ? "Шинэ" : "Хэрэглэсэн"}
               </span>
             </div>
             <div>
@@ -124,14 +152,12 @@ export default function ProductDetailPage() {
         <button
           onClick={handleAddToCart}
           disabled={isAdding || product.stock === 0}
-          className="w-full bg-yellow-500 text-black py-4 rounded-lg font-semibold hover:bg-yellow-400 disabled:bg-yellow-600 disabled:cursor-not-allowed transition-colors"
-        >
-          {product.stock === 0 
-            ? 'Дууссан' 
-            : isAdding 
-            ? 'Сагсанд нэмж байна...' 
-            : 'Сагсанд нэмэх'
-          }
+          className="w-full bg-yellow-500 text-black py-4 rounded-lg font-semibold hover:bg-yellow-400 disabled:bg-yellow-600 disabled:cursor-not-allowed transition-colors">
+          {product.stock === 0
+            ? "Дууссан"
+            : isAdding
+            ? "Сагсанд нэмж байна..."
+            : "Сагсанд нэмэх"}
         </button>
       </div>
     </div>

@@ -1,16 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
-interface CreateUserModalProps {
+interface EditUserModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: any) => void;
+  userId: string | null;
 }
 
-export function CreateUserModal({ isOpen, onClose, onSubmit }: CreateUserModalProps) {
+export function EditUserModal({ isOpen, onClose, onSubmit, userId }: EditUserModalProps) {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -21,8 +22,40 @@ export function CreateUserModal({ isOpen, onClose, onSubmit }: CreateUserModalPr
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    if (isOpen && userId) {
+      fetchUser();
+    }
+  }, [isOpen, userId]);
+
+  const fetchUser = async () => {
+    if (!userId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+
+      setFormData({
+        name: data.name,
+        email: data.email,
+        phone: data.phone || '',
+        role: data.role,
+        status: data.status
+      });
+    } catch (err: any) {
+      setError(err.message || 'Хэрэглэгчийн мэдээлэл татахад алдаа гарлаа');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!userId) return;
+
     setIsLoading(true);
     
     if (!supabase) {
@@ -35,20 +68,14 @@ export function CreateUserModal({ isOpen, onClose, onSubmit }: CreateUserModalPr
     try {
       const { data, error } = await supabase
         .from('users')
-        .insert([formData])
+        .update(formData)
+        .eq('id', userId)
         .select()
         .single();
 
       if (error) throw error;
 
       onSubmit(data);
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        role: 'user',
-        status: 'active'
-      });
       onClose();
     } catch (err: any) {
       setError(err.message || 'Алдаа гарлаа');
@@ -63,7 +90,7 @@ export function CreateUserModal({ isOpen, onClose, onSubmit }: CreateUserModalPr
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-card rounded-lg border border-border p-6 w-full max-w-md mx-4">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-foreground">Шинэ хэрэглэгч нэмэх</h3>
+          <h3 className="text-lg font-semibold text-foreground">Хэрэглэгч засах</h3>
           <button
             onClick={onClose}
             className="p-2 hover:bg-muted rounded-lg transition-colors"
@@ -154,7 +181,7 @@ export function CreateUserModal({ isOpen, onClose, onSubmit }: CreateUserModalPr
               disabled={isLoading}
               className="flex-1 bg-yellow-500 text-black py-2 rounded-lg hover:bg-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
             >
-              {isLoading ? 'Нэмж байна...' : 'Нэмэх'}
+              {isLoading ? 'Хадгалж байна...' : 'Хадгалах'}
             </button>
             <button
               type="button"

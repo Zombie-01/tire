@@ -1,22 +1,59 @@
 'use client';
 
 import { useState } from 'react';
+import { useEffect } from 'react';
 import { Search, Plus, CreditCard as Edit, Trash2, ArrowUpDown } from 'lucide-react';
 import Image from 'next/image';
-import { products, brands } from '@/lib/database';
 import { CreateProductModal } from '@/components/ui/modals/create-product-modal';
+import { supabase } from '@/lib/supabase';
+import { products as staticProducts, brands as staticBrands } from '@/lib/database';
 
 export default function AdminProductsPage() {
+  const [products, setProducts] = useState<any[]>([]);
+  const [brands, setBrands] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBrand, setSelectedBrand] = useState('');
   const [selectedCondition, setSelectedCondition] = useState('');
   const [sortBy, setSortBy] = useState('name');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      if (supabase) {
+        const [productsResult, brandsResult] = await Promise.all([
+          supabase.from('products').select('*').order('created_at', { ascending: false }),
+          supabase.from('brands').select('*').order('name')
+        ]);
+
+        if (productsResult.error) throw productsResult.error;
+        if (brandsResult.error) throw brandsResult.error;
+
+        setProducts(productsResult.data || []);
+        setBrands(brandsResult.data || []);
+      } else {
+        // Use static data when Supabase is not configured
+        setProducts(staticProducts);
+        setBrands(staticBrands);
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      // Fallback to static data on error
+      setProducts(staticProducts);
+      setBrands(staticBrands);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.size.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesBrand = !selectedBrand || product.brandId === selectedBrand;
+    const matchesBrand = !selectedBrand || product.brand_id === selectedBrand;
     const matchesCondition = !selectedCondition || product.condition === selectedCondition;
     
     return matchesSearch && matchesBrand && matchesCondition;
@@ -36,7 +73,7 @@ export default function AdminProductsPage() {
   });
 
   const getBrandName = (brandId: string) => {
-    return brands.find(brand => brand.id === brandId)?.name || 'Unknown';
+    return brands.find(brand => brand.id === brandId)?.name || 'Тодорхойгүй';
   };
 
   const handleEdit = (productId: string) => {
@@ -45,9 +82,45 @@ export default function AdminProductsPage() {
 
   const handleDelete = (productId: string) => {
     if (confirm('Энэ бүтээгдэхүүнийг устгахдаа итгэлтэй байна уу?')) {
-      alert(`Бүтээгдэхүүн устгах: ${productId}`);
+      deleteProduct(productId);
     }
   };
+
+  const deleteProduct = async (productId: string) => {
+    try {
+      if (supabase) {
+        const { error } = await supabase
+          .from('products')
+          .delete()
+          .eq('id', productId);
+
+        if (error) throw error;
+        
+        // Refresh products list
+        fetchData();
+      } else {
+        alert('Supabase тохиргоо хийгдээгүй байна. Статик өгөгдөл ашиглаж байна.');
+      }
+    } catch (error: any) {
+      alert('Алдаа гарлаа: ' + error.message);
+    }
+  };
+
+  const handleCreateProduct = (data: any) => {
+    // Refresh products list
+    fetchData();
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Бүтээгдэхүүнүүдийг ачааллаж байна...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
@@ -165,7 +238,7 @@ export default function AdminProductsPage() {
               
               <div className="space-y-2">
                 <h3 className="font-semibold ">{product.name}</h3>
-                <p className="text-sm text-gray-600">{getBrandName(product.brandId)}</p>
+                <p className="text-sm text-gray-600">{getBrandName(product.brand_id)}</p>
                 <p className="text-sm text-gray-600">Хэмжээ: {product.size}</p>
                 <p className="text-lg font-bold text-yellow-600">₮{product.price.toLocaleString()}</p>
                 <p className="text-sm ">Нөөц: {product.stock}</p>
@@ -201,9 +274,7 @@ export default function AdminProductsPage() {
          <CreateProductModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onSubmit={(data) => {
-          console.log("Form submitted:", data);
-        }}
+        onSubmit={handleCreateProduct}
       />
 
     </div>

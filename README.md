@@ -37,7 +37,13 @@
 npm install
 ```
 
-2. Run development server:
+2. Set up Supabase (optional):
+   - Create a new project at [supabase.com](https://supabase.com)
+   - Copy your project URL and anon key
+   - Update `.env.local` with your credentials
+   - Run the SQL migration from `supabase/migrations/001_initial_schema.sql`
+
+3. Run development server:
 ```bash
 npm run dev
 ```
@@ -47,12 +53,12 @@ npm run dev
 ## Demo Accounts
 
 ### Admin Account
-- Email: `admin@example.com`
-- Password: `admin123`
+- **Static Mode**: Email: `admin@example.com`, Password: `admin123`
+- **Supabase Mode**: Use Supabase Auth or the admin user created in migration
 
 ### User Account  
-- Email: `user@example.com`
-- Password: `user123`
+- **Static Mode**: Email: `user@example.com`, Password: `user123`
+- **Supabase Mode**: Register through the app or use sample users from migration
 
 ## Project Structure
 
@@ -73,25 +79,28 @@ npm run dev
 └── public/               # Static assets
 ```
 
-## Supabase Integration (Tomorrow)
+## Supabase Integration
 
-The project is ready for Supabase integration:
+The project supports both static data and Supabase:
 
-1. **Database Schema**: Pre-defined in `lib/supabase-config.ts`
-2. **Static Data**: Current data structure matches Supabase tables
-3. **Authentication**: Ready to switch from static to Supabase Auth
-4. **Environment**: `.env.local` template ready
+### **Setup Steps:**
+1. **Create Supabase Project**: Go to [supabase.com](https://supabase.com)
+2. **Run Migration**: Execute `supabase/migrations/001_initial_schema.sql` in SQL Editor
+3. **Update Environment**: Add your URL and anon key to `.env.local`
+4. **Restart Server**: `npm run dev`
 
-### Migration Steps:
-1. Create Supabase project
-2. Run SQL schema from `supabase-config.ts`
-3. Add environment variables
-4. Replace static data with Supabase client calls
-5. Update authentication system
+### **Features with Supabase:**
+- **Real Authentication**: Supabase Auth with email/password
+- **Live Database**: All CRUD operations work with PostgreSQL
+- **Row Level Security**: Proper permissions and data isolation
+- **Real-time Updates**: Changes reflect immediately
+- **Admin Management**: Full user, product, and brand management
 
 ## Deployment
 
-The project is ready for deployment with static data. All features work without external dependencies.
+The project works in two modes:
+- **Static Mode**: No external dependencies, works everywhere
+- **Supabase Mode**: Full database functionality with real-time updates
 
 ## Features Ready for Production
 
@@ -104,6 +113,9 @@ The project is ready for deployment with static data. All features work without 
 ✅ Order management  
 ✅ Dark theme  
 ✅ Mongolian localization  
+✅ Supabase integration
+✅ Real authentication
+✅ Database CRUD operations
 
 ## License
 

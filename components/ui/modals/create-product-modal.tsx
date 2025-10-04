@@ -1,55 +1,108 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { brands } from '@/lib/database';
+import { supabase } from '@/lib/supabase';
+import { ImageUpload } from '@/components/ui/image-upload';
 
 interface CreateProductModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit?: (data: any) => void;
+  onSubmit: (data: any) => void;
+}
+
+interface Brand {
+  id: string;
+  name: string;
 }
 
 export function CreateProductModal({ isOpen, onClose, onSubmit }: CreateProductModalProps) {
   const [formData, setFormData] = useState({
     name: '',
-    brandId: '',
+    brand_id: '',
     size: '',
-    price: '',
-    condition: 'new',
+    price: 0,
+    condition: 'new' as 'new' | 'used',
     description: '',
-    image: '',
-    stock: '',
+    image: 'https://images.pexels.com/photos/3642618/pexels-photo-3642618.jpeg?auto=compress&cs=tinysrgb&w=400',
+    popularity: 0,
+    stock: 0,
+    is_active: true
   });
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [uploadError, setUploadError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (isOpen) {
+      fetchBrands();
+    }
+  }, [isOpen]);
+
+  const fetchBrands = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('brands')
+        .select('id, name')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      setBrands(data || []);
+    } catch (err) {
+      console.error('Error fetching brands:', err);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit?.({
-      ...formData,
-      price: parseInt(formData.price),
-      stock: parseInt(formData.stock),
-    });
+    setIsLoading(true);
+    
+    if (!supabase) {
+      alert('Supabase тохиргоо хийгдээгүй байна. Статик өгөгдөл ашиглаж байна.');
+      setIsLoading(false);
+      return;
+    }
+    setError('');
 
-    setFormData({
-      name: '',
-      brandId: '',
-      size: '',
-      price: '',
-      condition: 'new',
-      description: '',
-      image: '',
-      stock: '',
-    });
-    onClose();
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .insert([formData])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      onSubmit(data);
+      setFormData({
+        name: '',
+        brand_id: '',
+        size: '',
+        price: 0,
+        condition: 'new',
+        description: '',
+        image: 'https://images.pexels.com/photos/3642618/pexels-photo-3642618.jpeg?auto=compress&cs=tinysrgb&w=400',
+        popularity: 0,
+        stock: 0,
+        is_active: true
+      });
+      onClose();
+    } catch (err: any) {
+      setError(err.message || 'Алдаа гарлаа');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-card rounded-lg border border-border p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-semibold text-foreground">Шинэ дугуй нэмэх</h3>
+      <div className="bg-card rounded-lg border border-border p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-foreground">Шинэ бүтээгдэхүүн нэмэх</h3>
           <button
             onClick={onClose}
             className="p-2 hover:bg-muted rounded-lg transition-colors"
@@ -57,138 +110,173 @@ export function CreateProductModal({ isOpen, onClose, onSubmit }: CreateProductM
             <X size={20} />
           </button>
         </div>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Нэр *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                placeholder="Pilot Sport 4"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Брэнд *
-              </label>
-              <select
-                required
-                value={formData.brandId}
-                onChange={(e) => setFormData({ ...formData, brandId: e.target.value })}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
-              >
-                <option value="">Брэнд сонгох</option>
-                {brands.map((brand) => (
-                  <option key={brand.id} value={brand.id}>
-                    {brand.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Хэмжээ *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.size}
-                onChange={(e) => setFormData({ ...formData, size: e.target.value })}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                placeholder="225/45R17"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Үнэ (₮) *
-              </label>
-              <input
-                type="number"
-                required
-                value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                placeholder="350000"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Байдал *
-              </label>
-              <select
-                value={formData.condition}
-                onChange={(e) => setFormData({ ...formData, condition: e.target.value as 'new' | 'used' })}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
-              >
-                <option value="new">Шинэ</option>
-                <option value="used">Хэрэглэсэн</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Нөөц *
-              </label>
-              <input
-                type="number"
-                required
-                value={formData.stock}
-                onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                placeholder="10"
-              />
-            </div>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm">
+            {error}
           </div>
-          
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
-              Зургийн URL *
+              Нэр *
             </label>
             <input
-              type="url"
+              type="text"
               required
-              value={formData.image}
-              onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
-              placeholder="https://images.pexels.com/..."
+              placeholder="Pilot Sport 4"
             />
           </div>
-          
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Брэнд *
+            </label>
+            <select
+              required
+              value={formData.brand_id}
+              onChange={(e) => setFormData({ ...formData, brand_id: e.target.value })}
+              className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+            >
+              <option value="">Брэнд сонгох</option>
+              {brands.map(brand => (
+                <option key={brand.id} value={brand.id}>{brand.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Хэмжээ *
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.size}
+              onChange={(e) => setFormData({ ...formData, size: e.target.value })}
+              className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+              placeholder="225/45R17"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Үнэ (₮) *
+            </label>
+            <input
+              type="number"
+              required
+              min="0"
+              value={formData.price}
+              onChange={(e) => setFormData({ ...formData, price: parseInt(e.target.value) || 0 })}
+              className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+              placeholder="350000"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Байдал
+            </label>
+            <select
+              value={formData.condition}
+              onChange={(e) => setFormData({ ...formData, condition: e.target.value as 'new' | 'used' })}
+              className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+            >
+              <option value="new">Шинэ</option>
+              <option value="used">Хэрэглэсэн</option>
+            </select>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
               Тайлбар *
             </label>
             <textarea
               required
-              rows={3}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
-              placeholder="Дугуйн дэлгэрэнгүй тайлбар..."
+              className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 h-20 resize-none"
+              placeholder="Бүтээгдэхүүний тайлбар"
             />
           </div>
-          
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Зураг
+            </label>
+            <ImageUpload
+              value={formData.image}
+              onChange={(url) => setFormData({ ...formData, image: url })}
+              onError={setUploadError}
+              bucket="product-images"
+              placeholder="Бүтээгдэхүүний зураг оруулах"
+            />
+            {uploadError && (
+              <p className="text-sm text-red-500 mt-1">{uploadError}</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Алдартай байдал (%)
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={formData.popularity}
+                onChange={(e) => setFormData({ ...formData, popularity: parseInt(e.target.value) || 0 })}
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                placeholder="85"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Нөөц
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={formData.stock}
+                onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) || 0 })}
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                placeholder="10"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="is_active"
+              checked={formData.is_active}
+              onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+              className="w-4 h-4 text-yellow-500 bg-background border-border rounded focus:ring-yellow-500"
+            />
+            <label htmlFor="is_active" className="text-sm text-foreground">
+              Идэвхтэй
+            </label>
+          </div>
+
           <div className="flex gap-3 pt-4">
             <button
               type="submit"
-              className="flex-1 bg-yellow-500 text-black py-3 rounded-lg hover:bg-yellow-400 transition-colors font-medium"
+              disabled={isLoading}
+              className="flex-1 bg-yellow-500 text-black py-2 rounded-lg hover:bg-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
             >
-              Дугуй нэмэх
+              {isLoading ? 'Нэмж байна...' : 'Нэмэх'}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 bg-muted text-foreground py-3 rounded-lg hover:bg-muted/80 transition-colors"
+              className="flex-1 bg-muted text-foreground py-2 rounded-lg hover:bg-muted/80 transition-colors"
             >
               Цуцлах
             </button>

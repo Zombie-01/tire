@@ -1,32 +1,63 @@
 'use client';
 
 import { useState } from 'react';
+import { useEffect } from 'react';
 import Image from 'next/image';
-import { brands, products, getBrandById } from '@/lib/database';
 import { Search, Plus, CreditCard as Edit, Trash2, Building2 } from 'lucide-react';
 import { CreateBrandModal } from '@/components/ui/modals/create-brand-modal';
+import { supabase } from '@/lib/supabase';
+import { brands as staticBrands, products as staticProducts } from '@/lib/database';
 
 export default function AdminBrandsPage() {
+  const [brands, setBrands] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      if (supabase) {
+        const [brandsResult, productsResult] = await Promise.all([
+          supabase.from('brands').select('*').order('created_at', { ascending: false }),
+          supabase.from('products').select('*')
+        ]);
+
+        if (brandsResult.error) throw brandsResult.error;
+        if (productsResult.error) throw productsResult.error;
+
+        setBrands(brandsResult.data || []);
+        setProducts(productsResult.data || []);
+      } else {
+        // Use static data when Supabase is not configured
+        setBrands(staticBrands);
+        setProducts(staticProducts);
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      // Fallback to static data on error
+      setBrands(staticBrands);
+      setProducts(staticProducts);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredBrands = brands.filter(brand =>
     brand.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getBrandProductCount = (brandName: string) => {
-    return products.filter(product => {
-      const brand = getBrandById(product.brandId);
-      return brand?.name === brandName;
-    }).length;
+  const getBrandProductCount = (brandId: string) => {
+    return products.filter(product => product.brand_id === brandId).length;
   };
 
-  const getBrandRevenue = (brandName: string) => {
+  const getBrandRevenue = (brandId: string) => {
     return products
-      .filter(product => {
-        const brand = getBrandById(product.brandId);
-        return brand?.name === brandName;
-      })
+      .filter(product => product.brand_id === brandId)
       .reduce((sum, product) => sum + product.price, 0);
   };
 
@@ -36,13 +67,46 @@ export default function AdminBrandsPage() {
 
   const handleDelete = (brandId: string) => {
     if (confirm('Энэ брэндийг устгахдаа итгэлтэй байна уу?')) {
-      alert(`Брэнд устгах: ${brandId}`);
+      deleteBrand(brandId);
+    }
+  };
+
+  const deleteBrand = async (brandId: string) => {
+    try {
+      if (supabase) {
+        const { error } = await supabase
+          .from('brands')
+          .delete()
+          .eq('id', brandId);
+
+        if (error) throw error;
+        
+        // Refresh brands list
+        fetchData();
+      } else {
+        alert('Supabase тохиргоо хийгдээгүй байна. Статик өгөгдөл ашиглаж байна.');
+      }
+    } catch (error: any) {
+      alert('Алдаа гарлаа: ' + error.message);
     }
   };
 
   const handleCreateBrand = (data: any) => {
-    alert(`Шинэ брэнд нэмэх: ${JSON.stringify(data)}`);
+    // Refresh brands list
+    fetchData();
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Брэндүүдийг ачааллаж байна...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -76,8 +140,8 @@ export default function AdminBrandsPage() {
       {/* Brands Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredBrands.map((brand) => {
-          const productCount = getBrandProductCount(brand.name);
-          const revenue = getBrandRevenue(brand.name);
+          const productCount = getBrandProductCount(brand.id);
+          const revenue = getBrandRevenue(brand.id);
           
           return (
             <div key={brand.id} className="bg-card rounded-lg border border-border overflow-hidden">
@@ -100,11 +164,11 @@ export default function AdminBrandsPage() {
                 
                 <div className="flex items-center gap-2">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    brand.isActive 
+                    brand.is_active 
                       ? 'bg-green-500/10 text-green-500' 
                       : 'bg-red-500/10 text-red-500'
                   }`}>
-                    {brand.isActive ? 'Идэвхтэй' : 'Идэвхгүй'}
+                    {brand.is_active ? 'Идэвхтэй' : 'Идэвхгүй'}
                   </span>
                 </div>
                 
@@ -167,7 +231,7 @@ export default function AdminBrandsPage() {
             <div className="flex justify-between">
               <span className="text-muted-foreground">Идэвхтэй брэнд:</span>
               <span className="font-medium text-green-500">
-                {brands.filter(b => b.isActive).length}
+                {brands.filter(b => b.is_active).length}
               </span>
             </div>
           </div>
@@ -177,13 +241,13 @@ export default function AdminBrandsPage() {
           <h3 className="text-lg font-semibold text-foreground mb-4">Хамгийн их бүтээгдэхүүнтэй</h3>
           <div className="space-y-3">
             {brands
-              .sort((a, b) => getBrandProductCount(b.name) - getBrandProductCount(a.name))
+              .sort((a, b) => getBrandProductCount(b.id) - getBrandProductCount(a.id))
               .slice(0, 3)
               .map(brand => (
                 <div key={brand.id} className="flex justify-between">
                   <span className="text-muted-foreground">{brand.name}:</span>
                   <span className="font-medium text-foreground">
-                    {getBrandProductCount(brand.name)} ширхэг
+                    {getBrandProductCount(brand.id)} ширхэг
                   </span>
                 </div>
               ))}
@@ -194,13 +258,13 @@ export default function AdminBrandsPage() {
           <h3 className="text-lg font-semibold text-foreground mb-4">Хамгийн өндөр үнэтэй</h3>
           <div className="space-y-3">
             {brands
-              .sort((a, b) => getBrandRevenue(b.name) - getBrandRevenue(a.name))
+              .sort((a, b) => getBrandRevenue(b.id) - getBrandRevenue(a.id))
               .slice(0, 3)
               .map(brand => (
                 <div key={brand.id} className="flex justify-between">
                   <span className="text-muted-foreground">{brand.name}:</span>
                   <span className="font-medium text-green-500">
-                    ₮{Math.round(getBrandRevenue(brand.name) / 1000)}к
+                    ₮{Math.round(getBrandRevenue(brand.id) / 1000)}к
                   </span>
                 </div>
               ))}

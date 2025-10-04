@@ -3,10 +3,18 @@
 import { useState } from 'react';
 import { banners, settings } from '@/lib/database';
 import { Plus, CreditCard as Edit, Trash2, Eye, EyeOff, Settings as SettingsIcon, Image as ImageIcon } from 'lucide-react';
+import { ImageUpload } from '@/components/ui/image-upload';
 
 export default function AdminSettingsPage() {
   const [activeTab, setActiveTab] = useState('banners');
   const [showBannerModal, setShowBannerModal] = useState(false);
+  const [bannerForm, setBannerForm] = useState({
+    title: '',
+    subtitle: '',
+    image: '',
+    cta: 'Худалдан авах'
+  });
+  const [uploadError, setUploadError] = useState('');
 
   const tabs = [
     { id: 'banners', label: 'Баннерууд', icon: ImageIcon },
@@ -206,13 +214,18 @@ export default function AdminSettingsPage() {
               
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  Зургийн URL
+                  Баннерын зураг
                 </label>
-                <input
-                  type="url"
-                  className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                  placeholder="https://example.com/image.jpg"
+                <ImageUpload
+                  value={bannerForm.image}
+                  onChange={(url) => setBannerForm({ ...bannerForm, image: url })}
+                  onError={setUploadError}
+                  bucket="banners"
+                  placeholder="Баннерын зураг оруулах"
                 />
+                {uploadError && (
+                  <p className="text-sm text-red-500 mt-1">{uploadError}</p>
+                )}
               </div>
               
               <div>
