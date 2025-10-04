@@ -64,7 +64,6 @@ export default function ProductDetailPage() {
     dispatch({ type: "ADD_ITEM", payload: [product] });
     setTimeout(() => setIsAdding(false), 1000);
   };
-
   return (
     <div className="p-4 space-y-6">
       {/* Back Button */}
