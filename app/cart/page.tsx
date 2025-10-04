@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import Image from 'next/image';
-import Link from 'next/link';
-import { Minus, Plus, Trash2 } from 'lucide-react';
-import { useCart } from '@/lib/cart-context';
-import { useAuth } from '@/lib/auth-context';
-import { LoginModal } from '@/components/ui/login-modal';
-import { useState, useMemo } from 'react';
+import Image from "next/image";
+import Link from "next/link";
+import { Minus, Plus, Trash2 } from "lucide-react";
+import { useCart } from "@/lib/cart-context";
+import { useAuth } from "@/lib/auth-context";
+import { LoginModal } from "@/components/ui/login-modal";
+import { useState, useMemo } from "react";
 
 // Type for cart items
 interface CartItem {
@@ -22,16 +22,18 @@ interface CartItem {
 // Example function to get brand name by id
 const getBrandById = (id?: string): { name: string } | undefined => {
   const brands: Record<string, { name: string }> = {
-    '1': { name: 'Michelin' },
-    '2': { name: 'Bridgestone' },
-    '3': { name: 'Goodyear' },
+    "1": { name: "Michelin" },
+    "2": { name: "Bridgestone" },
+    "3": { name: "Goodyear" },
   };
   return id ? brands[id] : undefined;
 };
 
 // Currency formatter
 const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('mn-MN', { style: 'currency', currency: 'MNT' }).format(value);
+  new Intl.NumberFormat("mn-MN", { style: "currency", currency: "MNT" }).format(
+    value
+  );
 
 export default function CartPage() {
   const { state, dispatch } = useCart();
@@ -40,14 +42,17 @@ export default function CartPage() {
 
   const updateQuantity = (id: string, newQuantity: number) => {
     if (newQuantity <= 0) {
-      dispatch({ type: 'REMOVE_ITEM', payload: id });
+      dispatch({ type: "REMOVE_ITEM", payload: id });
     } else {
-      dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity: newQuantity } });
+      dispatch({
+        type: "UPDATE_QUANTITY",
+        payload: { id, quantity: newQuantity },
+      });
     }
   };
 
   const removeItem = (id: string) => {
-    dispatch({ type: 'REMOVE_ITEM', payload: id });
+    dispatch({ type: "REMOVE_ITEM", payload: id });
   };
 
   // Calculate total items and total price
@@ -57,7 +62,8 @@ export default function CartPage() {
   );
 
   const totalPrice = useMemo(
-    () => state.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    () =>
+      state.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
     [state.items]
   );
 
@@ -67,11 +73,12 @@ export default function CartPage() {
       <div className="p-4">
         <h1 className="text-2xl font-bold text-foreground mb-6">Сагс</h1>
         <div className="text-center py-12">
-          <p className="text-muted-foreground text-lg mb-4">Таны сагс хоосон байна</p>
+          <p className="text-muted-foreground text-lg mb-4">
+            Таны сагс хоосон байна
+          </p>
           <Link
             href="/products"
-            className="inline-block bg-yellow-500 text-black px-6 py-3 rounded-lg hover:bg-yellow-400 transition-colors font-semibold"
-          >
+            className="inline-block bg-yellow-500 text-black px-6 py-3 rounded-lg hover:bg-yellow-400 transition-colors font-semibold">
             Дугуй худалдан авах
           </Link>
         </div>
@@ -85,11 +92,13 @@ export default function CartPage() {
 
       {/* Cart Items */}
       <div className="space-y-4">
-        {state.items.map((item: CartItem) => {
+        {state.items.map((item: any) => {
           const brand = getBrandById(item.brandId);
 
           return (
-            <div key={item.id} className="bg-card rounded-lg border border-border p-4">
+            <div
+              key={item.id}
+              className="bg-card rounded-lg border border-border p-4">
               <div className="flex gap-4">
                 <div className="relative w-20 h-20 flex-shrink-0">
                   <Image
@@ -113,8 +122,7 @@ export default function CartPage() {
                 <div className="flex flex-col items-end gap-2">
                   <button
                     onClick={() => removeItem(item.id)}
-                    className="text-red-400 hover:text-red-300 transition-colors p-1"
-                  >
+                    className="text-red-400 hover:text-red-300 transition-colors p-1">
                     <Trash2 size={16} />
                   </button>
 
@@ -122,17 +130,17 @@ export default function CartPage() {
                     <button
                       onClick={() => updateQuantity(item.id, item.quantity - 1)}
                       className="w-8 h-8 flex items-center justify-center rounded-full border border-border hover:bg-yellow-500/20 hover:border-yellow-500 transition-colors disabled:opacity-50"
-                      disabled={item.quantity <= 1}
-                    >
+                      disabled={item.quantity <= 1}>
                       <Minus size={16} />
                     </button>
 
-                    <span className="w-8 text-center font-medium">{item.quantity}</span>
+                    <span className="w-8 text-center font-medium">
+                      {item.quantity}
+                    </span>
 
                     <button
                       onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                      className="w-8 h-8 flex items-center justify-center rounded-full border border-border hover:bg-yellow-500/20 hover:border-yellow-500 transition-colors"
-                    >
+                      className="w-8 h-8 flex items-center justify-center rounded-full border border-border hover:bg-yellow-500/20 hover:border-yellow-500 transition-colors">
                       <Plus size={16} />
                     </button>
                   </div>
@@ -173,8 +181,7 @@ export default function CartPage() {
         <div className="flex flex-col gap-2">
           <Link
             href="/products"
-            className="w-full bg-gray-200 text-black py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors text-center"
-          >
+            className="w-full bg-gray-200 text-black py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors text-center">
             Дугуй цааш үзэх
           </Link>
 
@@ -183,11 +190,10 @@ export default function CartPage() {
               if (!authState.isAuthenticated) {
                 setShowLoginModal(true);
               } else {
-                alert('Төлбөр тооцооны систем одоохондоо бэлэн биш байна');
+                alert("Төлбөр тооцооны систем одоохондоо бэлэн биш байна");
               }
             }}
-            className="w-full bg-yellow-500 text-black py-4 rounded-lg font-semibold hover:bg-yellow-400 transition-colors"
-          >
+            className="w-full bg-yellow-500 text-black py-4 rounded-lg font-semibold hover:bg-yellow-400 transition-colors">
             Төлбөр тооцоо
           </button>
         </div>
@@ -196,7 +202,9 @@ export default function CartPage() {
       <LoginModal
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
-        onSuccess={() => alert('Төлбөр тооцооны систем одоохондоо бэлэн биш байна')}
+        onSuccess={() =>
+          alert("Төлбөр тооцооны систем одоохондоо бэлэн биш байна")
+        }
       />
     </div>
   );

@@ -169,7 +169,7 @@ export default function ProductsPage() {
                 <span className="font-medium">Бүх хэмжээ</span>
               </div>
             </button>
-            {[...new Set(products.map((p) => p.size))].map((size) => (
+            {Array.from(new Set(products.map((p) => p.size))).map((size) => (
               <button
                 key={size}
                 onClick={() => setSelectedSize(size)}

@@ -48,21 +48,21 @@ export default function AdminSettingsPage() {
     fetchData();
   }, []);
 
-  const handleToggleBanner = async (bannerId) => {
+  const handleToggleBanner = async (bannerId: string) => {
     alert(`Баннер идэвхжүүлэх/идэвхгүй болгох: ${bannerId}`);
   };
 
-  const handleEditBanner = async (bannerId) => {
+  const handleEditBanner = async (bannerId: string) => {
     alert(`Баннер засах: ${bannerId}`);
   };
 
-  const handleDeleteBanner = async (bannerId) => {
+  const handleDeleteBanner = async (bannerId: string) => {
     if (confirm("Энэ баннерыг устгахдаа итгэлтэй байна уу?")) {
       alert(`Баннер устгах: ${bannerId}`);
     }
   };
 
-  const handleUpdateSetting = async (settingId, newValue) => {
+  const handleUpdateSetting = async (settingId: string, newValue: string) => {
     alert(`Тохиргоо шинэчлэх: ${settingId} = ${newValue}`);
   };
 
