@@ -1,114 +1,98 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useEffect } from 'react';
-import { Search, Plus, CreditCard as Edit, Trash2, ArrowUpDown } from 'lucide-react';
-import Image from 'next/image';
-import { CreateProductModal } from '@/components/ui/modals/create-product-modal';
-import { supabase } from '@/lib/supabase';
-import { products as staticProducts, brands as staticBrands } from '@/lib/database';
+import { useState, useEffect } from "react";
+import {
+  Search,
+  Plus,
+  CreditCard as Edit,
+  Trash2,
+  ArrowUpDown,
+} from "lucide-react";
+import Image from "next/image";
+import { CreateProductModal } from "@/components/ui/modals/create-product-modal";
+import { fetchProducts, fetchBrands } from "@/lib/supabase-config";
 
 export default function AdminProductsPage() {
-  const [products, setProducts] = useState<any[]>([]);
-  const [brands, setBrands] = useState<any[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedBrand, setSelectedBrand] = useState('');
-  const [selectedCondition, setSelectedCondition] = useState('');
-  const [sortBy, setSortBy] = useState('name');
+  const [products, setProducts] = useState([]);
+  const [brands, setBrands] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedBrand, setSelectedBrand] = useState("");
+  const [selectedCondition, setSelectedCondition] = useState("");
+  const [sortBy, setSortBy] = useState("name");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const [fetchedProducts, fetchedBrands] = await Promise.all([
+          fetchProducts(),
+          fetchBrands(),
+        ]);
+        setProducts(fetchedProducts || []);
+        setBrands(fetchedBrands || []);
+      } catch (error) {
+        console.error("Error fetching products or brands:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     fetchData();
   }, []);
 
-  const fetchData = async () => {
-    try {
-      if (supabase) {
-        const [productsResult, brandsResult] = await Promise.all([
-          supabase.from('products').select('*').order('created_at', { ascending: false }),
-          supabase.from('brands').select('*').order('name')
-        ]);
-
-        if (productsResult.error) throw productsResult.error;
-        if (brandsResult.error) throw brandsResult.error;
-
-        setProducts(productsResult.data || []);
-        setBrands(brandsResult.data || []);
-      } else {
-        // Use static data when Supabase is not configured
-        setProducts(staticProducts);
-        setBrands(staticBrands);
-      }
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      // Fallback to static data on error
-      setProducts(staticProducts);
-      setBrands(staticBrands);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.size.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch =
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.size.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesBrand = !selectedBrand || product.brand_id === selectedBrand;
-    const matchesCondition = !selectedCondition || product.condition === selectedCondition;
-    
+    const matchesCondition =
+      !selectedCondition || product.condition === selectedCondition;
+
     return matchesSearch && matchesBrand && matchesCondition;
   });
 
   const sortedProducts = [...filteredProducts].sort((a, b) => {
     switch (sortBy) {
-      case 'price-low':
+      case "price-low":
         return a.price - b.price;
-      case 'price-high':
+      case "price-high":
         return b.price - a.price;
-      case 'name':
+      case "name":
         return a.name.localeCompare(b.name);
       default:
         return 0;
     }
   });
 
-  const getBrandName = (brandId: string) => {
-    return brands.find(brand => brand.id === brandId)?.name || 'Тодорхойгүй';
+  const getBrandName = (brandId) => {
+    return brands.find((brand) => brand.id === brandId)?.name || "Тодорхойгүй";
   };
 
-  const handleEdit = (productId: string) => {
+  const handleEdit = (productId) => {
     alert(`Бүтээгдэхүүн засах: ${productId}`);
   };
 
-  const handleDelete = (productId: string) => {
-    if (confirm('Энэ бүтээгдэхүүнийг устгахдаа итгэлтэй байна уу?')) {
-      deleteProduct(productId);
-    }
-  };
-
-  const deleteProduct = async (productId: string) => {
-    try {
-      if (supabase) {
+  const handleDelete = async (productId) => {
+    if (confirm("Энэ бүтээгдэхүүнийг устгахдаа итгэлтэй байна уу?")) {
+      try {
         const { error } = await supabase
-          .from('products')
+          .from("products")
           .delete()
-          .eq('id', productId);
-
+          .eq("id", productId);
         if (error) throw error;
-        
-        // Refresh products list
-        fetchData();
-      } else {
-        alert('Supabase тохиргоо хийгдээгүй байна. Статик өгөгдөл ашиглаж байна.');
+        setProducts(products.filter((product) => product.id !== productId));
+      } catch (error) {
+        console.error("Error deleting product:", error);
       }
-    } catch (error: any) {
-      alert('Алдаа гарлаа: ' + error.message);
     }
   };
 
-  const handleCreateProduct = (data: any) => {
+  const handleCreateProduct = () => {
     // Refresh products list
-    fetchData();
+    setIsCreateModalOpen(false);
+    fetchProducts().then(setProducts);
   };
 
   if (isLoading) {
@@ -116,7 +100,9 @@ export default function AdminProductsPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Бүтээгдэхүүнүүдийг ачааллаж байна...</p>
+          <p className="text-muted-foreground">
+            Бүтээгдэхүүнүүдийг ачааллаж байна...
+          </p>
         </div>
       </div>
     );
@@ -128,8 +114,7 @@ export default function AdminProductsPage() {
         <h1 className="text-2xl font-bold ">Бүтээгдэхүүн удирдах</h1>
         <button
           onClick={() => setIsCreateModalOpen(true)}
-          className="bg-yellow-500 hover:bg-yellow-600 text-black px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-        >
+          className="bg-yellow-500 hover:bg-yellow-600 text-black px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
           <Plus className="w-4 h-4" />
           Шинэ бүтээгдэхүүн
         </button>
@@ -144,19 +129,22 @@ export default function AdminProductsPage() {
         <div className=" p-4 rounded-lg shadow-sm border">
           <h3 className="text-sm font-medium ">Шинэ дугуй</h3>
           <p className="text-2xl font-bold text-green-600">
-            {products.filter(p => p.condition === 'new').length}
+            {products.filter((p) => p.condition === "new").length}
           </p>
         </div>
         <div className=" p-4 rounded-lg shadow-sm border">
           <h3 className="text-sm font-medium ">Хуучин дугуй</h3>
           <p className="text-2xl font-bold text-blue-600">
-            {products.filter(p => p.condition === 'used').length}
+            {products.filter((p) => p.condition === "used").length}
           </p>
         </div>
         <div className=" p-4 rounded-lg shadow-sm border">
           <h3 className="text-sm font-medium ">Дундаж үнэ</h3>
           <p className="text-2xl font-bold ">
-            ₮{Math.round(products.reduce((sum, p) => sum + p.price, 0) / products.length).toLocaleString()}
+            ₮
+            {Math.round(
+              products.reduce((sum, p) => sum + p.price, 0) / products.length
+            ).toLocaleString()}
           </p>
         </div>
       </div>
@@ -174,23 +162,23 @@ export default function AdminProductsPage() {
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
             />
           </div>
-          
+
           <select
             value={selectedBrand}
             onChange={(e) => setSelectedBrand(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-          >
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent">
             <option value="">Бүх брэнд</option>
-            {brands.map(brand => (
-              <option key={brand.id} value={brand.id}>{brand.name}</option>
+            {brands.map((brand) => (
+              <option key={brand.id} value={brand.id}>
+                {brand.name}
+              </option>
             ))}
           </select>
 
           <select
             value={selectedCondition}
             onChange={(e) => setSelectedCondition(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-          >
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent">
             <option value="">Бүх төлөв</option>
             <option value="new">Шинэ</option>
             <option value="used">Хуучин</option>
@@ -199,8 +187,7 @@ export default function AdminProductsPage() {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-          >
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent">
             <option value="name">Нэрээр</option>
             <option value="price-low">Үнэ (Бага → Их)</option>
             <option value="price-high">Үнэ (Их → Бага)</option>
@@ -216,8 +203,10 @@ export default function AdminProductsPage() {
       {/* Products Grid */}
       <div className=" rounded-lg shadow-sm border overflow-hidden">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-          {sortedProducts.map(product => (
-            <div key={product.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+          {sortedProducts.map((product) => (
+            <div
+              key={product.id}
+              className="border rounded-lg p-4 hover:shadow-md transition-shadow">
               <div className="relative w-full h-48 mb-4 bg-gray-100 rounded-lg overflow-hidden">
                 <Image
                   src={product.image}
@@ -226,35 +215,38 @@ export default function AdminProductsPage() {
                   className="object-cover"
                 />
                 <div className="absolute top-2 right-2">
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    product.condition === 'new' 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-blue-100 text-blue-800'
-                  }`}>
-                    {product.condition === 'new' ? 'Шинэ' : 'Хуучин'}
+                  <span
+                    className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      product.condition === "new"
+                        ? "bg-green-100 text-green-800"
+                        : "bg-blue-100 text-blue-800"
+                    }`}>
+                    {product.condition === "new" ? "Шинэ" : "Хуучин"}
                   </span>
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <h3 className="font-semibold ">{product.name}</h3>
-                <p className="text-sm text-gray-600">{getBrandName(product.brand_id)}</p>
+                <p className="text-sm text-gray-600">
+                  {getBrandName(product.brand_id)}
+                </p>
                 <p className="text-sm text-gray-600">Хэмжээ: {product.size}</p>
-                <p className="text-lg font-bold text-yellow-600">₮{product.price.toLocaleString()}</p>
+                <p className="text-lg font-bold text-yellow-600">
+                  ₮{product.price.toLocaleString()}
+                </p>
                 <p className="text-sm ">Нөөц: {product.stock}</p>
-                
+
                 <div className="flex gap-2 pt-2">
                   <button
                     onClick={() => handleEdit(product.id)}
-                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors"
-                  >
+                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors">
                     <Edit className="w-4 h-4" />
                     Засах
                   </button>
                   <button
                     onClick={() => handleDelete(product.id)}
-                    className="flex-1 bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors"
-                  >
+                    className="flex-1 bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors">
                     <Trash2 className="w-4 h-4" />
                     Устгах
                   </button>
@@ -271,12 +263,11 @@ export default function AdminProductsPage() {
         )}
       </div>
 
-         <CreateProductModal
+      <CreateProductModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSubmit={handleCreateProduct}
       />
-
     </div>
   );
 }
