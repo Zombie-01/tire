@@ -8,8 +8,8 @@ import { fetchProducts, fetchBrands } from "@/lib/supabase-config";
 
 export default function ProductsPage() {
   const searchParams = useSearchParams();
-  const [products, setProducts] = useState([]);
-  const [brands, setBrands] = useState([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [brands, setBrands] = useState<any[]>([]);
   const [selectedBrand, setSelectedBrand] = useState(
     searchParams.get("brand") || ""
   );
@@ -17,7 +17,7 @@ export default function ProductsPage() {
   const [selectedCondition, setSelectedCondition] = useState("");
   const [priceRange, setPriceRange] = useState({ min: 0, max: 1000000 });
   const [sortBy, setSortBy] = useState("popularity");
-  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
 
   // Fetch products and brands on component mount
   useEffect(() => {

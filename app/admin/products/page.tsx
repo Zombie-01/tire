@@ -11,10 +11,11 @@ import {
 import Image from "next/image";
 import { CreateProductModal } from "@/components/ui/modals/create-product-modal";
 import { fetchProducts, fetchBrands } from "@/lib/supabase-config";
+import { supabase } from "@/lib/supabase";
 
 export default function AdminProductsPage() {
-  const [products, setProducts] = useState([]);
-  const [brands, setBrands] = useState([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [brands, setBrands] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedBrand, setSelectedBrand] = useState("");
   const [selectedCondition, setSelectedCondition] = useState("");
@@ -66,15 +67,15 @@ export default function AdminProductsPage() {
     }
   });
 
-  const getBrandName = (brandId) => {
+  const getBrandName = (brandId: string) => {
     return brands.find((brand) => brand.id === brandId)?.name || "Тодорхойгүй";
   };
 
-  const handleEdit = (productId) => {
+  const handleEdit = (productId: string) => {
     alert(`Бүтээгдэхүүн засах: ${productId}`);
   };
 
-  const handleDelete = async (productId) => {
+  const handleDelete = async (productId: string) => {
     if (confirm("Энэ бүтээгдэхүүнийг устгахдаа итгэлтэй байна уу?")) {
       try {
         const { error } = await supabase

@@ -15,8 +15,8 @@ import { fetchBanners, fetchSettings } from "@/lib/supabase-config";
 
 export default function AdminSettingsPage() {
   const [activeTab, setActiveTab] = useState("banners");
-  const [banners, setBanners] = useState([]);
-  const [settings, setSettings] = useState([]);
+  const [banners, setBanners] = useState<any[]>([]);
+  const [settings, setSettings] = useState<any[]>([]);
   const [showBannerModal, setShowBannerModal] = useState(false);
   const [bannerForm, setBannerForm] = useState({
     title: "",

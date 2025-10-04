@@ -5,8 +5,8 @@ import { Search, Eye, CreditCard as Edit, Package } from "lucide-react";
 import { fetchOrders, fetchUsers } from "@/lib/supabase-config";
 
 export default function AdminOrdersPage() {
-  const [orders, setOrders] = useState([]);
-  const [users, setUsers] = useState([]);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
@@ -31,7 +31,8 @@ export default function AdminOrdersPage() {
     fetchData();
   }, []);
 
-  const getUserById = (userId) => users.find((user) => user.id === userId);
+  const getUserById = (userId: string) =>
+    users.find((user) => user.id === userId);
 
   const filteredOrders = orders.filter((order) => {
     const user = getUserById(order.user_id);
@@ -47,7 +48,7 @@ export default function AdminOrdersPage() {
     return matchesSearch && matchesStatus;
   });
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case "pending":
         return "text-yellow-500 bg-yellow-500/10";
@@ -64,7 +65,7 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const getStatusText = (status) => {
+  const getStatusText = (status: string) => {
     switch (status) {
       case "pending":
         return "Хүлээгдэж буй";
@@ -81,11 +82,11 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const handleViewOrder = (orderId) => {
+  const handleViewOrder = (orderId: string) => {
     alert(`Захиалга харах: ${orderId}`);
   };
 
-  const handleEditOrder = (orderId) => {
+  const handleEditOrder = (orderId: string) => {
     alert(`Захиалга засах: ${orderId}`);
   };
 
@@ -190,7 +191,7 @@ export default function AdminOrdersPage() {
                       <Package size={16} className="text-muted-foreground" />
                       <span className="text-foreground">
                         {order.items.reduce(
-                          (sum, item) => sum + item.quantity,
+                          (sum: number, item: any) => sum + item.quantity,
                           0
                         )}{" "}
                         ширхэг

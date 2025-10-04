@@ -11,10 +11,11 @@ import {
 } from "lucide-react";
 import { CreateBrandModal } from "@/components/ui/modals/create-brand-modal";
 import { fetchBrands, fetchProducts } from "@/lib/supabase-config";
+import { supabase } from "@/lib/supabase";
 
 export default function AdminBrandsPage() {
-  const [brands, setBrands] = useState([]);
-  const [products, setProducts] = useState([]);
+  const [brands, setBrands] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -43,21 +44,21 @@ export default function AdminBrandsPage() {
     brand.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getBrandProductCount = (brandId) => {
+  const getBrandProductCount = (brandId: string) => {
     return products.filter((product) => product.brand_id === brandId).length;
   };
 
-  const getBrandRevenue = (brandId) => {
+  const getBrandRevenue = (brandId: string) => {
     return products
       .filter((product) => product.brand_id === brandId)
       .reduce((sum, product) => sum + product.price, 0);
   };
 
-  const handleEdit = (brandId) => {
+  const handleEdit = (brandId: string) => {
     alert(`Брэнд засах: ${brandId}`);
   };
 
-  const handleDelete = async (brandId) => {
+  const handleDelete = async (brandId: string) => {
     if (confirm("Энэ брэндийг устгахдаа итгэлтэй байна уу?")) {
       try {
         const { error } = await supabase

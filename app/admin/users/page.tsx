@@ -11,9 +11,10 @@ import {
 import { CreateUserModal } from "@/components/ui/modals/create-user-modal";
 import { EditUserModal } from "@/components/ui/modals/edit-user-modal";
 import { fetchUsers } from "@/lib/supabase-config";
+import { supabase } from "@/lib/supabase";
 
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [roleFilter, setRoleFilter] = useState("all");
