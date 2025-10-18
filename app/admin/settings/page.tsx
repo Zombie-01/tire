@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { fetchBanners, fetchSettings } from "@/lib/supabase-config";
+import { supabase } from "@/lib/supabase";
 
 export default function AdminSettingsPage() {
   const [activeTab, setActiveTab] = useState("banners");
@@ -25,6 +26,7 @@ export default function AdminSettingsPage() {
     cta: "Худалдан авах",
   });
   const [uploadError, setUploadError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const tabs = [
     { id: "banners", label: "Баннерууд", icon: ImageIcon },
@@ -47,23 +49,107 @@ export default function AdminSettingsPage() {
 
     fetchData();
   }, []);
+  const deleteImage = async (logoUrl: string) => {
+    try {
+      const filePath = logoUrl.split("/storage/v1/object/public/brands/")[1];
+      if (filePath) {
+        const { error } = await supabase.storage
+          .from("banners")
+          .remove([filePath]);
+        if (error) {
+          console.error("Error deleting image:", error);
+        }
+      }
+    } catch (error) {
+      console.error("Error extracting file path or deleting image:", error);
+    }
+  };
+  const handleCreateBanner = async () => {
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.from("banners").insert({
+        title: bannerForm.title,
+        subtitle: bannerForm.subtitle,
+        image: bannerForm.image,
+        cta: bannerForm.cta,
+        is_active: true,
+        order_index: banners.length,
+      });
 
-  const handleToggleBanner = async (bannerId: string) => {
-    alert(`Баннер идэвхжүүлэх/идэвхгүй болгох: ${bannerId}`);
+      if (error) throw error;
+
+      const updatedBanners = await fetchBanners();
+      setBanners(updatedBanners || []);
+      setShowBannerModal(false);
+      setBannerForm({
+        title: "",
+        subtitle: "",
+        image: "",
+        cta: "Худалдан авах",
+      });
+    } catch (error) {
+      console.error("Error creating banner:", error);
+      alert("Баннер нэмэхэд алдаа гарлаа.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleEditBanner = async (bannerId: string) => {
-    alert(`Баннер засах: ${bannerId}`);
+  const handleToggleBanner = async (bannerId: string, isActive: boolean) => {
+    try {
+      const { error } = await supabase
+        .from("banners")
+        .update({ is_active: !isActive })
+        .eq("id", bannerId);
+
+      if (error) throw error;
+
+      const updatedBanners = await fetchBanners();
+      setBanners(updatedBanners || []);
+    } catch (error) {
+      console.error("Error toggling banner:", error);
+      alert("Баннер идэвхжүүлэх/идэвхгүй болгоход алдаа гарлаа.");
+    }
   };
 
   const handleDeleteBanner = async (bannerId: string) => {
-    if (confirm("Энэ баннерыг устгахдаа итгэлтэй байна уу?")) {
-      alert(`Баннер устгах: ${bannerId}`);
+    if (!confirm("Энэ баннерыг устгахдаа итгэлтэй байна уу?")) return;
+    const brand = banners.find((b) => b.id === bannerId);
+    if (brand?.image) {
+      await deleteImage(brand.image);
+    }
+
+    try {
+      const { error } = await supabase
+        .from("banners")
+        .delete()
+        .eq("id", bannerId);
+
+      if (error) throw error;
+
+      const updatedBanners = await fetchBanners();
+      setBanners(updatedBanners || []);
+    } catch (error) {
+      console.error("Error deleting banner:", error);
+      alert("Баннер устгахад алдаа гарлаа.");
     }
   };
 
   const handleUpdateSetting = async (settingId: string, newValue: string) => {
-    alert(`Тохиргоо шинэчлэх: ${settingId} = ${newValue}`);
+    try {
+      const { error } = await supabase
+        .from("settings")
+        .update({ value: newValue })
+        .eq("id", settingId);
+
+      if (error) throw error;
+
+      const updatedSettings = await fetchSettings();
+      setSettings(updatedSettings || []);
+    } catch (error) {
+      console.error("Error updating setting:", error);
+      alert("Тохиргоо шинэчлэхэд алдаа гарлаа.");
+    }
   };
 
   return (
@@ -124,7 +210,9 @@ export default function AdminSettingsPage() {
                       />
                       <div className="absolute top-2 right-2">
                         <button
-                          onClick={() => handleToggleBanner(banner.id)}
+                          onClick={() =>
+                            handleToggleBanner(banner.id, banner.is_active)
+                          }
                           className={`p-2 rounded-lg ${
                             banner.is_active
                               ? "bg-green-500 text-white"
@@ -165,11 +253,6 @@ export default function AdminSettingsPage() {
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleEditBanner(banner.id)}
-                            className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors">
-                            <Edit size={16} />
-                          </button>
                           <button
                             onClick={() => handleDeleteBanner(banner.id)}
                             className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors">
@@ -243,6 +326,10 @@ export default function AdminSettingsPage() {
                 </label>
                 <input
                   type="text"
+                  value={bannerForm.title}
+                  onChange={(e) =>
+                    setBannerForm({ ...bannerForm, title: e.target.value })
+                  }
                   className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
                   placeholder="Баннерын гарчиг"
                 />
@@ -254,6 +341,10 @@ export default function AdminSettingsPage() {
                 </label>
                 <input
                   type="text"
+                  value={bannerForm.subtitle}
+                  onChange={(e) =>
+                    setBannerForm({ ...bannerForm, subtitle: e.target.value })
+                  }
                   className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
                   placeholder="Дэд гарчиг"
                 />
@@ -283,6 +374,10 @@ export default function AdminSettingsPage() {
                 </label>
                 <input
                   type="text"
+                  value={bannerForm.cta}
+                  onChange={(e) =>
+                    setBannerForm({ ...bannerForm, cta: e.target.value })
+                  }
                   className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
                   placeholder="Худалдан авах"
                 />
@@ -291,12 +386,10 @@ export default function AdminSettingsPage() {
 
             <div className="flex gap-3 mt-6">
               <button
-                onClick={() => {
-                  alert("Баннер нэмэх функц");
-                  setShowBannerModal(false);
-                }}
-                className="flex-1 bg-yellow-500 text-black py-2 rounded-lg hover:bg-yellow-400 transition-colors font-medium">
-                Нэмэх
+                onClick={handleCreateBanner}
+                disabled={isSubmitting}
+                className="flex-1 bg-yellow-500 text-black py-2 rounded-lg hover:bg-yellow-400 transition-colors font-medium disabled:opacity-50">
+                {isSubmitting ? "Нэмэж байна..." : "Нэмэх"}
               </button>
               <button
                 onClick={() => setShowBannerModal(false)}

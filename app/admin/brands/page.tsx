@@ -2,13 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import {
-  Search,
-  Plus,
-  CreditCard as Edit,
-  Trash2,
-  Building2,
-} from "lucide-react";
+import { Search, Plus, Trash2, Building2 } from "lucide-react";
 import { CreateBrandModal } from "@/components/ui/modals/create-brand-modal";
 import { fetchBrands, fetchProducts } from "@/lib/supabase-config";
 import { supabase } from "@/lib/supabase";
@@ -54,29 +48,43 @@ export default function AdminBrandsPage() {
       .reduce((sum, product) => sum + product.price, 0);
   };
 
-  const handleEdit = (brandId: string) => {
-    alert(`Брэнд засах: ${brandId}`);
-  };
-
-  const handleDelete = async (brandId: string) => {
-    if (confirm("Энэ брэндийг устгахдаа итгэлтэй байна уу?")) {
-      try {
-        const { error } = await supabase
+  const deleteImage = async (logoUrl: string) => {
+    try {
+      const filePath = logoUrl.split("/storage/v1/object/public/brands/")[1];
+      if (filePath) {
+        const { error } = await supabase.storage
           .from("brands")
-          .delete()
-          .eq("id", brandId);
-        if (error) throw error;
-        setBrands(brands.filter((brand) => brand.id !== brandId));
-      } catch (error) {
-        console.error("Error deleting brand:", error);
+          .remove([filePath]);
+        if (error) {
+          console.error("Error deleting image:", error);
+        }
       }
+    } catch (error) {
+      console.error("Error extracting file path or deleting image:", error);
     }
   };
 
-  const handleCreateBrand = () => {
-    // Refresh brands list
-    setShowCreateModal(false);
-    fetchBrands().then(setBrands);
+  const handleDeleteBrand = async (brandId: string) => {
+    if (!confirm("Энэ брэндийг устгахдаа итгэлтэй байна уу?")) return;
+
+    try {
+      const brand = brands.find((b) => b.id === brandId);
+      if (brand?.logo) {
+        await deleteImage(brand.logo);
+      }
+
+      const { error } = await supabase
+        .from("brands")
+        .delete()
+        .eq("id", brandId);
+      if (error) throw error;
+
+      const updatedBrands = await fetchBrands();
+      setBrands(updatedBrands || []);
+    } catch (error) {
+      console.error("Error deleting brand:", error);
+      alert("Брэнд устгахад алдаа гарлаа.");
+    }
   };
 
   if (isLoading) {
@@ -185,13 +193,7 @@ export default function AdminBrandsPage() {
 
                 <div className="flex items-center gap-2 pt-2">
                   <button
-                    onClick={() => handleEdit(brand.id)}
-                    className="flex-1 flex items-center justify-center gap-2 p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors">
-                    <Edit size={16} />
-                    <span className="text-sm">Засах</span>
-                  </button>
-                  <button
-                    onClick={() => handleDelete(brand.id)}
+                    onClick={() => handleDeleteBrand(brand.id)}
                     className="flex-1 flex items-center justify-center gap-2 p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors">
                     <Trash2 size={16} />
                     <span className="text-sm">Устгах</span>
@@ -209,82 +211,9 @@ export default function AdminBrandsPage() {
         </div>
       )}
 
-      {/* Brand Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-card rounded-lg border border-border p-6">
-          <h3 className="text-lg font-semibold text-foreground mb-4">
-            Брэндийн статистик
-          </h3>
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Нийт брэнд:</span>
-              <span className="font-medium text-foreground">
-                {brands.length}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">
-                Дундаж бүтээгдэхүүн:
-              </span>
-              <span className="font-medium text-foreground">
-                {Math.round(products.length / brands.length)}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Идэвхтэй брэнд:</span>
-              <span className="font-medium text-green-500">
-                {brands.filter((b) => b.is_active).length}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-card rounded-lg border border-border p-6">
-          <h3 className="text-lg font-semibold text-foreground mb-4">
-            Хамгийн их бүтээгдэхүүнтэй
-          </h3>
-          <div className="space-y-3">
-            {brands
-              .sort(
-                (a, b) =>
-                  getBrandProductCount(b.id) - getBrandProductCount(a.id)
-              )
-              .slice(0, 3)
-              .map((brand) => (
-                <div key={brand.id} className="flex justify-between">
-                  <span className="text-muted-foreground">{brand.name}:</span>
-                  <span className="font-medium text-foreground">
-                    {getBrandProductCount(brand.id)} ширхэг
-                  </span>
-                </div>
-              ))}
-          </div>
-        </div>
-
-        <div className="bg-card rounded-lg border border-border p-6">
-          <h3 className="text-lg font-semibold text-foreground mb-4">
-            Хамгийн өндөр үнэтэй
-          </h3>
-          <div className="space-y-3">
-            {brands
-              .sort((a, b) => getBrandRevenue(b.id) - getBrandRevenue(a.id))
-              .slice(0, 3)
-              .map((brand) => (
-                <div key={brand.id} className="flex justify-between">
-                  <span className="text-muted-foreground">{brand.name}:</span>
-                  <span className="font-medium text-green-500">
-                    ₮{Math.round(getBrandRevenue(brand.id) / 1000)}к
-                  </span>
-                </div>
-              ))}
-          </div>
-        </div>
-      </div>
-
       <CreateBrandModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        onSubmit={handleCreateBrand}
       />
     </div>
   );

@@ -72,17 +72,23 @@ export function OnboardingSlider() {
           <div className="absolute inset-0 bg-black/50" />
         </div>
 
-        <div className="relative z-10 h-full flex flex-col justify-end p-6 text-white">
+        <div className="relative z-10 h-full flex flex-col justify-end p-6 text-white sm:p-8 md:p-12">
           <div className="space-y-4 mb-8">
-            <h1 className="text-3xl font-bold">{slide.title}</h1>
-            <h2 className="text-xl text-yellow-400">{slide.subtitle}</h2>
-            <p className="text-white/80 leading-relaxed">{slide.description}</p>
+            <h1 className="text-3xl font-bold sm:text-4xl md:text-5xl">
+              {slide.title}
+            </h1>
+            <h2 className="text-xl text-yellow-400 sm:text-2xl md:text-3xl">
+              {slide.subtitle}
+            </h2>
+            <p className="text-white/80 leading-relaxed sm:text-lg md:text-xl">
+              {slide.description}
+            </p>
           </div>
         </div>
       </div>
 
       {/* Navigation */}
-      <div className="bg-black/90 p-6 space-y-4">
+      <div className="bg-black/90 p-6 space-y-4 sm:p-8 md:p-12">
         {/* Dots Indicator */}
         <div className="flex justify-center space-x-2">
           {slides.map((_, index) => (

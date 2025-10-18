@@ -39,6 +39,8 @@ export interface Product {
 export interface Order {
   id: string;
   userId: string;
+  phone: string;
+  address: string;
   items: {
     productId: string;
     quantity: number;

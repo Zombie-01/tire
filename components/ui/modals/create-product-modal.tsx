@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
-import { ImageUpload } from '@/components/ui/image-upload';
+import { useState, useEffect } from "react";
+import { X } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { ImageUpload } from "@/components/ui/image-upload";
 
 interface CreateProductModalProps {
   isOpen: boolean;
@@ -16,23 +16,28 @@ interface Brand {
   name: string;
 }
 
-export function CreateProductModal({ isOpen, onClose, onSubmit }: CreateProductModalProps) {
+export function CreateProductModal({
+  isOpen,
+  onClose,
+  onSubmit,
+}: CreateProductModalProps) {
   const [formData, setFormData] = useState({
-    name: '',
-    brand_id: '',
-    size: '',
+    name: "",
+    brand_id: "",
+    size: "",
     price: 0,
-    condition: 'new' as 'new' | 'used',
-    description: '',
-    image: 'https://images.pexels.com/photos/3642618/pexels-photo-3642618.jpeg?auto=compress&cs=tinysrgb&w=400',
+    condition: "new" as "new" | "used",
+    description: "",
+    image:
+      "https://images.pexels.com/photos/3642618/pexels-photo-3642618.jpeg?auto=compress&cs=tinysrgb&w=400",
     popularity: 0,
     stock: 0,
-    is_active: true
+    is_active: true,
   });
   const [brands, setBrands] = useState<Brand[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [uploadError, setUploadError] = useState('');
+  const [error, setError] = useState("");
+  const [uploadError, setUploadError] = useState("");
 
   useEffect(() => {
     if (isOpen) {
@@ -43,32 +48,34 @@ export function CreateProductModal({ isOpen, onClose, onSubmit }: CreateProductM
   const fetchBrands = async () => {
     try {
       const { data, error } = await supabase
-        .from('brands')
-        .select('id, name')
-        .eq('is_active', true)
-        .order('name');
+        .from("brands")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
 
       if (error) throw error;
       setBrands(data || []);
     } catch (err) {
-      console.error('Error fetching brands:', err);
+      console.error("Error fetching brands:", err);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     if (!supabase) {
-      alert('Supabase тохиргоо хийгдээгүй байна. Статик өгөгдөл ашиглаж байна.');
+      alert(
+        "Supabase тохиргоо хийгдээгүй байна. Статик өгөгдөл ашиглаж байна."
+      );
       setIsLoading(false);
       return;
     }
-    setError('');
+    setError("");
 
     try {
       const { data, error } = await supabase
-        .from('products')
+        .from("products")
         .insert([formData])
         .select()
         .single();
@@ -77,20 +84,21 @@ export function CreateProductModal({ isOpen, onClose, onSubmit }: CreateProductM
 
       onSubmit(data);
       setFormData({
-        name: '',
-        brand_id: '',
-        size: '',
+        name: "",
+        brand_id: "",
+        size: "",
         price: 0,
-        condition: 'new',
-        description: '',
-        image: 'https://images.pexels.com/photos/3642618/pexels-photo-3642618.jpeg?auto=compress&cs=tinysrgb&w=400',
+        condition: "new",
+        description: "",
+        image:
+          "https://images.pexels.com/photos/3642618/pexels-photo-3642618.jpeg?auto=compress&cs=tinysrgb&w=400",
         popularity: 0,
         stock: 0,
-        is_active: true
+        is_active: true,
       });
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Алдаа гарлаа');
+      setError(err.message || "Алдаа гарлаа");
     } finally {
       setIsLoading(false);
     }
@@ -102,11 +110,12 @@ export function CreateProductModal({ isOpen, onClose, onSubmit }: CreateProductM
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-card rounded-lg border border-border p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-foreground">Шинэ бүтээгдэхүүн нэмэх</h3>
+          <h3 className="text-lg font-semibold text-foreground">
+            Шинэ бүтээгдэхүүн нэмэх
+          </h3>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-muted rounded-lg transition-colors"
-          >
+            className="p-2 hover:bg-muted rounded-lg transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -126,7 +135,9 @@ export function CreateProductModal({ isOpen, onClose, onSubmit }: CreateProductM
               type="text"
               required
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
               placeholder="Pilot Sport 4"
             />
@@ -139,12 +150,15 @@ export function CreateProductModal({ isOpen, onClose, onSubmit }: CreateProductM
             <select
               required
               value={formData.brand_id}
-              onChange={(e) => setFormData({ ...formData, brand_id: e.target.value })}
-              className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
-            >
+              onChange={(e) =>
+                setFormData({ ...formData, brand_id: e.target.value })
+              }
+              className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500">
               <option value="">Брэнд сонгох</option>
-              {brands.map(brand => (
-                <option key={brand.id} value={brand.id}>{brand.name}</option>
+              {brands.map((brand) => (
+                <option key={brand.id} value={brand.id}>
+                  {brand.name}
+                </option>
               ))}
             </select>
           </div>
@@ -157,7 +171,9 @@ export function CreateProductModal({ isOpen, onClose, onSubmit }: CreateProductM
               type="text"
               required
               value={formData.size}
-              onChange={(e) => setFormData({ ...formData, size: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, size: e.target.value })
+              }
               className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
               placeholder="225/45R17"
             />
@@ -172,7 +188,12 @@ export function CreateProductModal({ isOpen, onClose, onSubmit }: CreateProductM
               required
               min="0"
               value={formData.price}
-              onChange={(e) => setFormData({ ...formData, price: parseInt(e.target.value) || 0 })}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  price: parseInt(e.target.value) || 0,
+                })
+              }
               className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
               placeholder="350000"
             />
@@ -184,9 +205,13 @@ export function CreateProductModal({ isOpen, onClose, onSubmit }: CreateProductM
             </label>
             <select
               value={formData.condition}
-              onChange={(e) => setFormData({ ...formData, condition: e.target.value as 'new' | 'used' })}
-              className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
-            >
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  condition: e.target.value as "new" | "used",
+                })
+              }
+              className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500">
               <option value="new">Шинэ</option>
               <option value="used">Хэрэглэсэн</option>
             </select>
@@ -199,7 +224,9 @@ export function CreateProductModal({ isOpen, onClose, onSubmit }: CreateProductM
             <textarea
               required
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
               className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 h-20 resize-none"
               placeholder="Бүтээгдэхүүний тайлбар"
             />
@@ -213,7 +240,7 @@ export function CreateProductModal({ isOpen, onClose, onSubmit }: CreateProductM
               value={formData.image}
               onChange={(url) => setFormData({ ...formData, image: url })}
               onError={setUploadError}
-              bucket="product-images"
+              bucket="products"
               placeholder="Бүтээгдэхүүний зураг оруулах"
             />
             {uploadError && (
@@ -231,7 +258,12 @@ export function CreateProductModal({ isOpen, onClose, onSubmit }: CreateProductM
                 min="0"
                 max="100"
                 value={formData.popularity}
-                onChange={(e) => setFormData({ ...formData, popularity: parseInt(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    popularity: parseInt(e.target.value) || 0,
+                  })
+                }
                 className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
                 placeholder="85"
               />
@@ -245,7 +277,12 @@ export function CreateProductModal({ isOpen, onClose, onSubmit }: CreateProductM
                 type="number"
                 min="0"
                 value={formData.stock}
-                onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    stock: parseInt(e.target.value) || 0,
+                  })
+                }
                 className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
                 placeholder="10"
               />
@@ -257,7 +294,9 @@ export function CreateProductModal({ isOpen, onClose, onSubmit }: CreateProductM
               type="checkbox"
               id="is_active"
               checked={formData.is_active}
-              onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+              onChange={(e) =>
+                setFormData({ ...formData, is_active: e.target.checked })
+              }
               className="w-4 h-4 text-yellow-500 bg-background border-border rounded focus:ring-yellow-500"
             />
             <label htmlFor="is_active" className="text-sm text-foreground">
@@ -269,15 +308,13 @@ export function CreateProductModal({ isOpen, onClose, onSubmit }: CreateProductM
             <button
               type="submit"
               disabled={isLoading}
-              className="flex-1 bg-yellow-500 text-black py-2 rounded-lg hover:bg-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-            >
-              {isLoading ? 'Нэмж байна...' : 'Нэмэх'}
+              className="flex-1 bg-yellow-500 text-black py-2 rounded-lg hover:bg-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium">
+              {isLoading ? "Нэмж байна..." : "Нэмэх"}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 bg-muted text-foreground py-2 rounded-lg hover:bg-muted/80 transition-colors"
-            >
+              className="flex-1 bg-muted text-foreground py-2 rounded-lg hover:bg-muted/80 transition-colors">
               Цуцлах
             </button>
           </div>

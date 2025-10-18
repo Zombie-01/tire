@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Eye, CreditCard as Edit, Package, X } from "lucide-react";
+import { Search, Eye, X } from "lucide-react";
 import { fetchOrders, fetchUsers } from "@/lib/supabase-config";
+import { supabase } from "@/lib/supabase";
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -11,6 +12,7 @@ export default function AdminOrdersPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null); // Track which order is being updated
 
   useEffect(() => {
     const fetchData = async () => {
@@ -80,6 +82,32 @@ export default function AdminOrdersPage() {
         return "Цуцалсан";
       default:
         return status;
+    }
+  };
+
+  const handleStatusChange = async (orderId: string, newStatus: string) => {
+    setUpdatingOrderId(orderId);
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({ status: newStatus })
+        .eq("id", orderId);
+
+      if (error) {
+        console.error("Error updating order status:", error);
+        alert("Захиалгын төлөвийг шинэчлэхэд алдаа гарлаа.");
+      } else {
+        setOrders((prevOrders) =>
+          prevOrders.map((order) =>
+            order.id === orderId ? { ...order, status: newStatus } : order
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      alert("Захиалгын төлөвийг шинэчлэхэд алдаа гарлаа.");
+    } finally {
+      setUpdatingOrderId(null);
     }
   };
 
@@ -190,7 +218,6 @@ export default function AdminOrdersPage() {
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-2">
-                      <Package size={16} className="text-muted-foreground" />
                       <span className="text-foreground">
                         {order.items.reduce(
                           (sum: number, item: any) => sum + item.quantity,
@@ -206,12 +233,19 @@ export default function AdminOrdersPage() {
                     </p>
                   </td>
                   <td className="p-4">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                        order.status
-                      )}`}>
-                      {getStatusText(order.status)}
-                    </span>
+                    <select
+                      value={order.status}
+                      onChange={(e) =>
+                        handleStatusChange(order.id, e.target.value)
+                      }
+                      disabled={updatingOrderId === order.id}
+                      className="px-2 py-1 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent">
+                      <option value="pending">Хүлээгдэж буй</option>
+                      <option value="processing">Боловсруулж буй</option>
+                      <option value="shipped">Илгээсэн</option>
+                      <option value="delivered">Хүргэсэн</option>
+                      <option value="cancelled">Цуцалсан</option>
+                    </select>
                   </td>
                   <td className="p-4 text-muted-foreground">
                     {order.created_at}

@@ -1,7 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ProductCard } from "@/components/ui/product-card";
-import { fetchBanners, fetchBrands, fetchProducts } from "@/lib/supabase-config";
+import {
+  fetchBanners,
+  fetchBrands,
+  fetchProducts,
+} from "@/lib/supabase-config";
 
 export default async function Home() {
   const banners = await fetchBanners();
@@ -21,8 +25,8 @@ export default async function Home() {
           <div className="relative rounded-lg overflow-hidden bg-gradient-to-r from-black via-yellow-600 to-black text-white">
             <div className="absolute inset-0">
               <Image
-                src={(banners?.[0]?.image) ?? ""}
-                alt={(banners?.[0]?.title) ?? ""}
+                src={banners?.[0]?.image ?? ""}
+                alt={banners?.[0]?.title ?? ""}
                 fill
                 className="object-cover opacity-30"
               />

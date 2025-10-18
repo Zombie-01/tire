@@ -2,66 +2,25 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Minus, Plus, Trash2 } from "lucide-react";
+import { Minus, Plus, Trash2, Loader2 } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
 import { useAuth } from "@/lib/auth-context";
 import { LoginModal } from "@/components/ui/login-modal";
-import { useState, useMemo } from "react";
-import { supabase } from "@/lib/supabase";
-import { v4 as uuidv4 } from "uuid"; // Import UUID library
-
-// Type for cart items
-interface CartItem {
-  id: string;
-  name: string;
-  brandId?: string; // optional if you resolve brand name elsewhere
-  size: string;
-  price: number;
-  quantity: number;
-  image: string;
-}
-
-// Example function to get brand name by id
-const getBrandById = (id?: string): { name: string } | undefined => {
-  const brands: Record<string, { name: string }> = {
-    "1": { name: "Michelin" },
-    "2": { name: "Bridgestone" },
-    "3": { name: "Goodyear" },
-  };
-  return id ? brands[id] : undefined;
-};
-
-// Currency formatter
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("mn-MN", { style: "currency", currency: "MNT" }).format(
-    value
-  );
+import { useState, useMemo, useEffect } from "react";
+import { supabase } from "@/lib/supabase"; // Import Supabase client
 
 export default function CartPage() {
   const { state, dispatch } = useCart();
   const { state: authState } = useAuth();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false); // Modal for phone and address
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [phone, setPhone] = useState(""); // State for phone
   const [address, setAddress] = useState(""); // State for address
+  const [invoice, setInvoice] = useState<any>(null); // State for invoice data
+  const [error, setError] = useState<string | null>(null); // State for error messages
 
-  const updateQuantity = (id: string, newQuantity: number) => {
-    if (newQuantity <= 0) {
-      dispatch({ type: "REMOVE_ITEM", payload: id });
-    } else {
-      dispatch({
-        type: "UPDATE_QUANTITY",
-        payload: { id, quantity: newQuantity },
-      });
-    }
-  };
-
-  const removeItem = (id: string) => {
-    dispatch({ type: "REMOVE_ITEM", payload: id });
-  };
-
-  // Calculate total items and total price
   const totalItems = useMemo(
     () => state.items.reduce((sum, item) => sum + item.quantity, 0),
     [state.items]
@@ -73,37 +32,124 @@ export default function CartPage() {
     [state.items]
   );
 
-  const handleConfirmPayment = async () => {
-    setIsSubmitting(true);
+  const Checkout = async () => {
     try {
-      const orderId = uuidv4(); // Generate a unique ID for the order
-      const { error } = await supabase.from("orders").insert({
-        id: orderId, // Use the generated ID
-        user_id: authState && authState.user ? authState.user.id : "",
-        items: state.items,
-        total: totalPrice,
-        phone, // Include phone
-        address, // Include address
-        status: "pending",
-      });
+      const res = await fetch(
+        process.env.NEXT_PUBLIC_QPAY_URL +
+          `/api/qpay/check/${invoice.invoice_id}`,
+        {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
 
-      if (error) {
-        console.error("Error creating order:", error);
-        alert("Захиалга үүсгэхэд алдаа гарлаа.");
-      } else {
-        alert("Захиалга амжилттай үүслээ. Бид удахгүй тантай холбогдох болно.");
-        dispatch({ type: "CLEAR_CART" });
-        setShowPaymentModal(false);
+      if (!res.ok) throw new Error("Failed to check invoice status");
+
+      const data = await res.json();
+      if (data.status === "PAID") {
+        handlePaymentSuccess();
       }
     } catch (err) {
-      console.error("Error:", err);
-      alert("Алдаа гарлаа. Дахин оролдоно уу.");
-    } finally {
-      setIsSubmitting(false);
+      console.error("Polling error:", err);
+      setError("Төлбөрийн мэдээллийг шалгахад алдаа гарлаа.");
     }
   };
 
-  // Empty cart UI
+  // Polling to check invoice status every 3 seconds
+  useEffect(() => {
+    if (!invoice || !showPaymentModal) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(
+          process.env.NEXT_PUBLIC_QPAY_URL +
+            `/api/qpay/check/${invoice.invoice_id}`,
+          {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+
+        if (!res.ok) throw new Error("Failed to check invoice status");
+
+        const data = await res.json();
+        if (data.status === "PAID") {
+          clearInterval(interval);
+          handlePaymentSuccess();
+        }
+      } catch (err) {
+        console.error("Polling error:", err);
+        setError("Төлбөрийн мэдээллийг шалгахад алдаа гарлаа.");
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [invoice, showPaymentModal]);
+
+  // Called when modal detects payment success
+  async function handlePaymentSuccess() {
+    if (!authState?.user || !invoice) return;
+
+    try {
+      const { error } = await supabase.from("orders").insert({
+        id: invoice.invoice_id, // Use the invoice ID as the order ID
+        user_id: authState.user.id,
+        phone,
+        address,
+        items: state.items,
+        total: totalPrice,
+        status: "pending",
+      });
+
+      if (error) throw new Error("Order creation failed: " + error.message);
+
+      dispatch({ type: "CLEAR_CART" });
+      alert("Захиалга амжилттай үүслээ!");
+      window.location.href = "/profile";
+    } catch (error) {
+      console.error(error);
+      setError("Төлбөрийн дараа захиалга үүсгэхэд алдаа гарлаа.");
+    }
+  }
+
+  async function handleCheckout() {
+    if (!authState?.user) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setError(null);
+
+      // Create QPay invoice
+      const res = await fetch(
+        process.env.NEXT_PUBLIC_QPAY_URL + "/api/qpay/create",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            invoiceNumber: `${Date.now()}`,
+            invoiceReceiverCode: "1",
+            amount: totalPrice,
+            items: state.items,
+          }),
+        }
+      );
+
+      if (!res.ok) throw new Error("Invoice creation failed.");
+
+      const invoiceData = await res.json();
+      setInvoice(invoiceData);
+      setShowPaymentModal(true);
+    } catch (error) {
+      console.error(error);
+      setError("Гүйлгээ үүсгэхэд алдаа гарлаа.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   if (state.items.length === 0) {
     return (
       <div className="p-4">
@@ -128,67 +174,71 @@ export default function CartPage() {
 
       {/* Cart Items */}
       <div className="space-y-4">
-        {state.items.map((item: any) => {
-          const brand = getBrandById(item.brandId);
-
-          return (
-            <div
-              key={item.id}
-              className="bg-card rounded-lg border border-border p-4">
-              <div className="flex gap-4">
-                <div className="relative w-20 h-20 flex-shrink-0">
-                  <Image
-                    src={item.image}
-                    alt={item.name}
-                    fill
-                    className="object-cover rounded-lg"
-                  />
-                </div>
-
-                <div className="flex-1 space-y-2">
-                  <h3 className="font-semibold text-foreground">
-                    {brand?.name} {item.name}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">{item.size}</p>
-                  <p className="text-lg font-bold text-yellow-500">
-                    {formatCurrency(item.price)}
-                  </p>
-                </div>
-
-                <div className="flex flex-col items-end gap-2">
-                  <button
-                    onClick={() => removeItem(item.id)}
-                    className="text-red-400 hover:text-red-300 transition-colors p-1">
-                    <Trash2 size={16} />
-                  </button>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                      className="w-8 h-8 flex items-center justify-center rounded-full border border-border hover:bg-yellow-500/20 hover:border-yellow-500 transition-colors disabled:opacity-50"
-                      disabled={item.quantity <= 1}>
-                      <Minus size={16} />
-                    </button>
-
-                    <span className="w-8 text-center font-medium">
-                      {item.quantity}
-                    </span>
-
-                    <button
-                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                      className="w-8 h-8 flex items-center justify-center rounded-full border border-border hover:bg-yellow-500/20 hover:border-yellow-500 transition-colors">
-                      <Plus size={16} />
-                    </button>
-                  </div>
-
-                  <p className="text-sm font-medium text-foreground">
-                    {formatCurrency(item.price * item.quantity)}
-                  </p>
-                </div>
-              </div>
+        {state.items.map((item: any) => (
+          <div
+            key={item.id}
+            className="bg-card rounded-lg border border-border p-4 flex flex-col sm:flex-row gap-4">
+            <div className="relative w-full sm:w-20 h-20 flex-shrink-0">
+              <Image
+                src={item.image}
+                alt={item.name}
+                fill
+                className="object-cover rounded-lg"
+              />
             </div>
-          );
-        })}
+
+            <div className="flex-1 space-y-2">
+              <h3 className="font-semibold text-foreground">{item.name}</h3>
+              <p className="text-sm text-muted-foreground">{item.size}</p>
+              <p className="text-lg font-bold text-yellow-500">
+                ₮{item.price.toLocaleString()}
+              </p>
+            </div>
+
+            <div className="flex flex-col items-end gap-2">
+              <button
+                onClick={() =>
+                  dispatch({ type: "REMOVE_ITEM", payload: item.id })
+                }
+                className="text-red-400 hover:text-red-300 transition-colors p-1">
+                <Trash2 size={16} />
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() =>
+                    dispatch({
+                      type: "UPDATE_QUANTITY",
+                      payload: { id: item.id, quantity: item.quantity - 1 },
+                    })
+                  }
+                  className="w-8 h-8 flex items-center justify-center rounded-full border border-border hover:bg-yellow-500/20 hover:border-yellow-500 transition-colors disabled:opacity-50"
+                  disabled={item.quantity <= 1}>
+                  <Minus size={16} />
+                </button>
+
+                <span className="w-8 text-center font-medium">
+                  {item.quantity}
+                </span>
+
+                <button
+                  onClick={() =>
+                    dispatch({
+                      type: "UPDATE_QUANTITY",
+                      payload: { id: item.id, quantity: item.quantity + 1 },
+                    })
+                  }
+                  className="w-8 h-8 flex items-center justify-center rounded-full border border-border hover:bg-yellow-500/20 hover:border-yellow-500 transition-colors">
+                  <Plus size={16} />
+                </button>
+              </div>
+
+              <p className="text-sm font-medium text-foreground">
+                ₮{(item.price * item.quantity).toLocaleString()}
+              </p>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Cart Summary */}
@@ -203,13 +253,13 @@ export default function CartPage() {
 
           <div className="flex justify-between text-muted-foreground">
             <span>Дэд нийлбэр:</span>
-            <span>{formatCurrency(totalPrice)}</span>
+            <span>₮{totalPrice.toLocaleString()}</span>
           </div>
 
           <div className="border-t border-border pt-2">
             <div className="flex justify-between text-xl font-bold text-foreground">
               <span>Нийт:</span>
-              <span>{formatCurrency(totalPrice)}</span>
+              <span>₮{totalPrice.toLocaleString()}</span>
             </div>
           </div>
         </div>
@@ -222,42 +272,28 @@ export default function CartPage() {
           </Link>
 
           <button
-            onClick={() => {
-              if (!authState.isAuthenticated) {
-                setShowLoginModal(true);
-              } else {
-                setShowPaymentModal(true);
-              }
-            }}
-            className="w-full bg-yellow-500 text-black py-4 rounded-lg font-semibold hover:bg-yellow-400 transition-colors">
-            Төлбөр тооцоо
+            onClick={() => setShowDetailsModal(true)}
+            disabled={isSubmitting}
+            className="w-full bg-yellow-500 text-black py-4 rounded-lg font-semibold hover:bg-yellow-400 transition-colors disabled:bg-yellow-600 disabled:cursor-not-allowed">
+            {isSubmitting ? (
+              <div className="flex items-center justify-center gap-2">
+                <Loader2 className="animate-spin" size={16} />
+                Төлбөр үүсгэж байна...
+              </div>
+            ) : (
+              "Төлбөр тооцоо"
+            )}
           </button>
         </div>
       </div>
 
-      {/* Payment Modal */}
-      {showPaymentModal && (
+      {/* Details Modal */}
+      {showDetailsModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-card rounded-lg border border-border w-full max-w-md p-6">
             <h3 className="text-lg font-semibold text-foreground mb-4">
-              Төлбөрийн мэдээлэл
+              Хүргэлтийн мэдээлэл
             </h3>
-            <p className="text-sm text-muted-foreground mb-2">
-              Та доорх данс руу нийт үнийн дүнг шилжүүлнэ үү:
-            </p>
-            <div className="bg-muted rounded-lg p-4 mb-4">
-              <p className="font-medium text-foreground">Хаан Банк</p>
-              <p className="text-sm text-muted-foreground">Данс: 1234567890</p>
-              <p className="text-sm text-muted-foreground">Нэр: Түмэн-Дугуй</p>
-            </div>
-            <div className="flex justify-between text-muted-foreground mb-4">
-              <span>Нийт дүн:</span>
-              <span className="font-bold text-foreground">
-                ₮{totalPrice.toLocaleString()}
-              </span>
-            </div>
-
-            {/* Phone Input */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-foreground mb-2">
                 Утасны дугаар
@@ -271,8 +307,6 @@ export default function CartPage() {
                 required
               />
             </div>
-
-            {/* Address Input */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-foreground mb-2">
                 Хаяг
@@ -286,16 +320,17 @@ export default function CartPage() {
                 required
               />
             </div>
-
             <div className="flex gap-3">
               <button
-                onClick={handleConfirmPayment}
-                disabled={isSubmitting}
-                className="flex-1 bg-yellow-500 text-black py-2 rounded-lg font-medium hover:bg-yellow-400 transition-colors disabled:bg-yellow-600 disabled:cursor-not-allowed">
-                {isSubmitting ? "Илгээж байна..." : "Төлбөрийг баталгаажуулах"}
+                onClick={() => {
+                  setShowDetailsModal(false);
+                  handleCheckout();
+                }}
+                className="flex-1 bg-yellow-500 text-black py-2 rounded-lg font-medium hover:bg-yellow-400 transition-colors">
+                Үргэлжлүүлэх
               </button>
               <button
-                onClick={() => setShowPaymentModal(false)}
+                onClick={() => setShowDetailsModal(false)}
                 className="flex-1 bg-muted text-foreground py-2 rounded-lg font-medium hover:bg-muted/80 transition-colors">
                 Цуцлах
               </button>
@@ -304,10 +339,55 @@ export default function CartPage() {
         </div>
       )}
 
+      {/* Payment Modal */}
+      {showPaymentModal && invoice && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-card rounded-lg border border-border w-full max-w-md p-6">
+            <h3 className="text-lg font-semibold text-foreground mb-4">
+              Төлбөрийн мэдээлэл
+            </h3>
+            {totalPrice && (
+              <div className="text-red-600 font-semibold text-xl mb-3">
+                {totalPrice.toLocaleString()}₮
+              </div>
+            )}
+
+            <p className="text-sm text-muted-foreground mb-2">
+              Та доорх QPay холбоосоор төлбөрөө хийнэ үү:
+            </p>
+            <img
+              src={`data:image/png;base64,${invoice.qr_image}`}
+              alt="QR код"
+              className="mx-auto w-48 h-48 object-contain mb-4"
+            />
+            <div className="flex gap-3 mt-4">
+              <a
+                href={invoice.qPay_shortUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 bg-green-500 text-center text-white py-2 rounded-lg font-medium hover:bg-green-400 transition-colors">
+                Банкны апп
+              </a>
+              <button
+                onClick={() => Checkout()}
+                className="flex-1 bg-muted text-foreground py-2 rounded-lg font-medium hover:bg-muted/80 transition-colors">
+                Төлбөр шалгах
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="text-red-500 text-sm bg-red-500/10 border border-red-500/20 rounded-lg p-3 mt-4">
+          {error}
+        </div>
+      )}
+
       <LoginModal
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
-        onSuccess={() => setShowPaymentModal(true)}
+        onSuccess={() => setShowPaymentModal(false)}
       />
     </div>
   );

@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess: () => void;
 }
 
 export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
@@ -35,7 +35,7 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
           setError("И-мэйл эсвэл нууц үг буруу байна");
         } else {
           onClose();
-          onSuccess?.();
+          onSuccess();
         }
       } else {
         const { error } = await register(name, email, password);

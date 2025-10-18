@@ -68,6 +68,8 @@ CREATE TABLE products (
 CREATE TABLE orders (
   id TEXT PRIMARY KEY,
   user_id UUID REFERENCES users(id),
+  phone TEXT,
+  address TEXT,
   items JSONB NOT NULL,
   total INTEGER NOT NULL,
   status TEXT CHECK (status IN ('pending', 'processing', 'shipped', 'delivered', 'cancelled')) DEFAULT 'pending',

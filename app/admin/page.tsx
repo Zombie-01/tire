@@ -11,10 +11,6 @@ import {
   ShoppingBag,
   Package,
   Building2,
-  TrendingUp,
-  Clock,
-  CircleCheck as CheckCircle,
-  CircleAlert as AlertCircle,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
@@ -64,40 +60,6 @@ export default function AdminDashboard() {
     return null;
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "text-yellow-500 bg-yellow-500/10";
-      case "processing":
-        return "text-blue-500 bg-blue-500/10";
-      case "shipped":
-        return "text-purple-500 bg-purple-500/10";
-      case "delivered":
-        return "text-green-500 bg-green-500/10";
-      case "cancelled":
-        return "text-red-500 bg-red-500/10";
-      default:
-        return "text-gray-500 bg-gray-500/10";
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "Хүлээгдэж буй";
-      case "processing":
-        return "Боловсруулж буй";
-      case "shipped":
-        return "Илгээсэн";
-      case "delivered":
-        return "Хүргэсэн";
-      case "cancelled":
-        return "Цуцалсан";
-      default:
-        return status;
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div>
@@ -108,7 +70,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-card rounded-lg border border-border p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -160,39 +122,6 @@ export default function AdminDashboard() {
               <Package size={24} className="text-purple-500" />
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Recent Orders */}
-      <div className="bg-card rounded-lg border border-border p-6">
-        <h3 className="text-lg font-semibold text-foreground mb-4">
-          Сүүлийн захиалгууд
-        </h3>
-        <div className="space-y-4">
-          {orders.slice(0, 5).map((order) => (
-            <div
-              key={order.id}
-              className="flex items-center justify-between p-3 bg-background rounded-lg">
-              <div>
-                <p className="font-medium text-foreground">{order.id}</p>
-                <p className="text-sm text-muted-foreground">
-                  {users.find((u) => u.id === order.user_id)?.name ||
-                    "Unknown User"}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="font-medium text-foreground">
-                  ₮{order.total.toLocaleString()}
-                </p>
-                <span
-                  className={`text-xs px-2 py-1 rounded-full ${getStatusColor(
-                    order.status
-                  )}`}>
-                  {getStatusText(order.status)}
-                </span>
-              </div>
-            </div>
-          ))}
         </div>
       </div>
     </div>

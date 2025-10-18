@@ -40,7 +40,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         ? action.payload
         : [action.payload];
       const existingItem = state.items.find(
-        (item) => item.id === payloadItems[0].id
+        (item) => payloadItems?.length > 0 && item.id === payloadItems[0].id
       );
 
       if (existingItem) {

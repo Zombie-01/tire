@@ -23,6 +23,22 @@ export default function AdminProductsPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  const deleteImage = async (logoUrl: string) => {
+    try {
+      const filePath = logoUrl.split("/storage/v1/object/public/brands/")[1];
+      if (filePath) {
+        const { error } = await supabase.storage
+          .from("products")
+          .remove([filePath]);
+        if (error) {
+          console.error("Error deleting image:", error);
+        }
+      }
+    } catch (error) {
+      console.error("Error extracting file path or deleting image:", error);
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
@@ -71,13 +87,13 @@ export default function AdminProductsPage() {
     return brands.find((brand) => brand.id === brandId)?.name || "Тодорхойгүй";
   };
 
-  const handleEdit = (productId: string) => {
-    alert(`Бүтээгдэхүүн засах: ${productId}`);
-  };
-
   const handleDelete = async (productId: string) => {
     if (confirm("Энэ бүтээгдэхүүнийг устгахдаа итгэлтэй байна уу?")) {
       try {
+        const brand = brands.find((b) => b.id === productId);
+        if (brand?.image) {
+          await deleteImage(brand.image);
+        }
         const { error } = await supabase
           .from("products")
           .delete()
@@ -167,7 +183,7 @@ export default function AdminProductsPage() {
           <select
             value={selectedBrand}
             onChange={(e) => setSelectedBrand(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent">
+            className="px-4 py-2 border bg-black border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent">
             <option value="">Бүх брэнд</option>
             {brands.map((brand) => (
               <option key={brand.id} value={brand.id}>
@@ -179,7 +195,7 @@ export default function AdminProductsPage() {
           <select
             value={selectedCondition}
             onChange={(e) => setSelectedCondition(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent">
+            className="px-4 py-2 border bg-black border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent">
             <option value="">Бүх төлөв</option>
             <option value="new">Шинэ</option>
             <option value="used">Хуучин</option>
@@ -188,7 +204,7 @@ export default function AdminProductsPage() {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent">
+            className="px-4 py-2 border bg-black border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent">
             <option value="name">Нэрээр</option>
             <option value="price-low">Үнэ (Бага → Их)</option>
             <option value="price-high">Үнэ (Их → Бага)</option>
@@ -239,12 +255,6 @@ export default function AdminProductsPage() {
                 <p className="text-sm ">Нөөц: {product.stock}</p>
 
                 <div className="flex gap-2 pt-2">
-                  <button
-                    onClick={() => handleEdit(product.id)}
-                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors">
-                    <Edit className="w-4 h-4" />
-                    Засах
-                  </button>
                   <button
                     onClick={() => handleDelete(product.id)}
                     className="flex-1 bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors">
