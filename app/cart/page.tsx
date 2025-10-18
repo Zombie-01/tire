@@ -105,6 +105,7 @@ export default function CartPage() {
 
       dispatch({ type: "CLEAR_CART" });
       alert("Захиалга амжилттай үүслээ!");
+      setShowPaymentModal(false);
       window.location.href = "/profile";
     } catch (error) {
       console.error(error);
