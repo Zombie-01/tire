@@ -63,7 +63,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const [loading, setLoading] = useState(true);
 
-  // 🔹 Centralized fetch function
   const fetchUserProfile = async (userId: string) => {
     const { data, error } = await supabase
       .from("users")
@@ -78,15 +77,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data as User;
   };
 
-  // 🔹 Initialize auth and handle rehydration
   useEffect(() => {
+    let mounted = true;
+
     const initializeAuth = async () => {
       try {
         const {
           data: { session },
         } = await supabase.auth.getSession();
 
-        if (session?.user) {
+        if (session?.user && mounted) {
           const userData = await fetchUserProfile(session.user.id);
           if (userData) {
             dispatch({ type: "LOGIN", payload: userData });
@@ -95,33 +95,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         console.error("Error initializing auth:", err);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
 
     initializeAuth();
 
-    // 🔹 Subscribe to auth state changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("🔄 Auth change:", event);
-      if (event === "SIGNED_IN" && session?.user) {
-        const userData = await fetchUserProfile(session.user.id);
-        if (userData) {
-          dispatch({ type: "LOGIN", payload: userData });
+    // 🔹 Always listen to auth state changes
+    const { data: subscription } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log("🔄 Auth change:", event);
+
+        if (event === "SIGNED_IN" && session?.user) {
+          const userData = await fetchUserProfile(session.user.id);
+          if (userData) {
+            dispatch({ type: "LOGIN", payload: userData });
+          }
+        } else if (event === "SIGNED_OUT") {
+          dispatch({ type: "LOGOUT" });
         }
-      } else if (event === "SIGNED_OUT") {
-        dispatch({ type: "LOGOUT" });
+
+        // ensure loading state resets even if event triggers before mount
+        if (mounted) setLoading(false);
       }
-    });
+    );
 
     return () => {
-      subscription.unsubscribe();
+      mounted = false;
+      subscription?.subscription.unsubscribe?.();
     };
   }, []);
 
-  // 🔹 Supabase login
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       const { error } = await supabase.auth.signInWithPassword({
@@ -132,14 +136,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error("Login error:", error);
         return false;
       }
-      return true; // Auth listener will handle updating state
+      return true;
     } catch (err) {
       console.error("Unexpected error during login:", err);
       return false;
     }
   };
 
-  // 🔹 Supabase register
   const register = async (
     name: string,
     email: string,
@@ -173,7 +176,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // 🔹 Supabase logout
   const logout = async () => {
     try {
       await supabase.auth.signOut();
