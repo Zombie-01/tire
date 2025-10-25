@@ -12,6 +12,8 @@ export default async function Home() {
   const brands = await fetchBrands();
   const products = await fetchProducts();
 
+  console.log(banners);
+
   // Get top 5 products by popularity
   const topProducts = (products ?? [])
     .sort((a, b) => b.popularity - a.popularity)

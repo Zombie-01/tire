@@ -52,6 +52,7 @@ export default function AdminProductsPage() {
       } catch (error) {
         console.error("Error fetching products or brands:", error);
       } finally {
+        console.log("finnaly ended fetching");
         setIsLoading(false);
       }
     };
