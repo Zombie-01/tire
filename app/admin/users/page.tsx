@@ -26,9 +26,10 @@ export default function AdminUsersPage() {
   useEffect(() => {
     const loadUsers = async () => {
       setIsLoading(true);
-      const fetchedUsers = await fetchUsers();
+      const fetchedUsers = await fetchUsers().finally(() => {
+        setIsLoading(false);
+      });
       setUsers(fetchedUsers);
-      setIsLoading(false);
     };
 
     loadUsers();
