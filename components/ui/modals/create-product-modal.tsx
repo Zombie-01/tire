@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+// Uses server API at /api/admin
 import { ImageUpload } from "@/components/ui/image-upload";
 
 interface CreateProductModalProps {
@@ -47,14 +47,11 @@ export function CreateProductModal({
 
   const fetchBrands = async () => {
     try {
-      const { data, error } = await supabase
-        .from("brands")
-        .select("id, name")
-        .eq("is_active", true)
-        .order("name");
-
-      if (error) throw error;
-      setBrands(data || []);
+      const res = await fetch("/api/admin/brands");
+      if (!res.ok) throw new Error("Failed to fetch brands");
+      const data = await res.json();
+      // data is an array of brands
+      setBrands((data || []).map((b: any) => ({ id: b.id, name: b.name })));
     } catch (err) {
       console.error("Error fetching brands:", err);
     }
@@ -63,26 +60,22 @@ export function CreateProductModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
-    if (!supabase) {
-      alert(
-        "Supabase тохиргоо хийгдээгүй байна. Статик өгөгдөл ашиглаж байна."
-      );
-      setIsLoading(false);
-      return;
-    }
     setError("");
-
     try {
-      const { data, error } = await supabase
-        .from("products")
-        .insert([formData])
-        .select()
-        .single();
+      const res = await fetch("/api/admin/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+        credentials: "same-origin",
+      });
 
-      if (error) throw error;
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error || "Failed to create product");
+      }
 
-      onSubmit(data);
+      const payload = await res.json();
+      onSubmit(payload.product);
       setFormData({
         name: "",
         brand_id: "",

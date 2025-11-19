@@ -2,15 +2,20 @@
 
 import { useState } from "react";
 import { X } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+// Uses server API at /api/admin/brands
 import { ImageUpload } from "@/components/ui/image-upload";
 
 interface CreateBrandModalProps {
   isOpen: boolean;
+  onBrandCreated: any;
   onClose: () => void;
 }
 
-export function CreateBrandModal({ isOpen, onClose }: CreateBrandModalProps) {
+export function CreateBrandModal({
+  isOpen,
+  onClose,
+  onBrandCreated,
+}: CreateBrandModalProps) {
   const [formData, setFormData] = useState({
     name: "",
     logo: "",
@@ -24,32 +29,24 @@ export function CreateBrandModal({ isOpen, onClose }: CreateBrandModalProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
-    if (!supabase) {
-      alert(
-        "Supabase тохиргоо хийгдээгүй байна. Статик өгөгдөл ашиглаж байна."
-      );
-      setIsLoading(false);
-      return;
-    }
     setError("");
-
     try {
-      const { data, error } = await supabase
-        .from("brands")
-        .insert([formData])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      setFormData({
-        name: "",
-        logo: "",
-        description: "",
-        is_active: true,
+      const res = await fetch("/api/admin/brands", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+        credentials: "same-origin",
       });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error || "Failed to create brand");
+      }
+
+      const payload = await res.json();
+      setFormData({ name: "", logo: "", description: "", is_active: true });
       onClose();
+      onBrandCreated(payload.brand);
     } catch (err: any) {
       setError(err.message || "Алдаа гарлаа");
     } finally {

@@ -1,11 +1,8 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import { Header } from "@/components/layout/header";
-import { BottomNavigation } from "@/components/layout/bottom-navigation";
 import { CartProvider } from "@/lib/cart-context";
 import { AuthProvider } from "@/lib/auth-context";
-import { OnboardingSlider } from "@/components/ui/onboarding-slider";
 import { ClientLayout } from "@/components/layout/client-layout";
 
 const inter = Inter({ subsets: ["latin"] });

@@ -1,8 +1,7 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { useState, useEffect } from "react";
+import { X } from "lucide-react";
 
 interface EditUserModalProps {
   isOpen: boolean;
@@ -11,16 +10,21 @@ interface EditUserModalProps {
   userId: string | null;
 }
 
-export function EditUserModal({ isOpen, onClose, onSubmit, userId }: EditUserModalProps) {
+export function EditUserModal({
+  isOpen,
+  onClose,
+  onSubmit,
+  userId,
+}: EditUserModalProps) {
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    role: 'user' as 'admin' | 'user',
-    status: 'active' as 'active' | 'inactive'
+    name: "",
+    email: "",
+    phone: "",
+    role: "user" as "admin" | "user",
+    status: "active" as "active" | "inactive",
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (isOpen && userId) {
@@ -30,25 +34,19 @@ export function EditUserModal({ isOpen, onClose, onSubmit, userId }: EditUserMod
 
   const fetchUser = async () => {
     if (!userId) return;
-
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) throw error;
-
+      const res = await fetch(`/api/admin/users/${userId}`);
+      if (!res.ok) throw new Error("Failed to fetch user");
+      const data = await res.json();
       setFormData({
         name: data.name,
         email: data.email,
-        phone: data.phone || '',
+        phone: data.phone || "",
         role: data.role,
-        status: data.status
+        status: data.status,
       });
     } catch (err: any) {
-      setError(err.message || 'Хэрэглэгчийн мэдээлэл татахад алдаа гарлаа');
+      setError(err.message || "Хэрэглэгчийн мэдээлэл татахад алдаа гарлаа");
     }
   };
 
@@ -57,28 +55,25 @@ export function EditUserModal({ isOpen, onClose, onSubmit, userId }: EditUserMod
     if (!userId) return;
 
     setIsLoading(true);
-    
-    if (!supabase) {
-      alert('Supabase тохиргоо хийгдээгүй байна. Статик өгөгдөл ашиглаж байна.');
-      setIsLoading(false);
-      return;
-    }
-    setError('');
-
+    setError("");
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .update(formData)
-        .eq('id', userId)
-        .select()
-        .single();
+      const res = await fetch(`/api/admin/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+        credentials: "same-origin",
+      });
 
-      if (error) throw error;
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error || "Failed to update user");
+      }
 
-      onSubmit(data);
+      const payload = await res.json();
+      onSubmit(payload.user);
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Алдаа гарлаа');
+      setError(err.message || "Алдаа гарлаа");
     } finally {
       setIsLoading(false);
     }
@@ -90,11 +85,12 @@ export function EditUserModal({ isOpen, onClose, onSubmit, userId }: EditUserMod
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-card rounded-lg border border-border p-6 w-full max-w-md mx-4">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-foreground">Хэрэглэгч засах</h3>
+          <h3 className="text-lg font-semibold text-foreground">
+            Хэрэглэгч засах
+          </h3>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-muted rounded-lg transition-colors"
-          >
+            className="p-2 hover:bg-muted rounded-lg transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -114,7 +110,9 @@ export function EditUserModal({ isOpen, onClose, onSubmit, userId }: EditUserMod
               type="text"
               required
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
               placeholder="Хэрэглэгчийн нэр"
             />
@@ -128,7 +126,9 @@ export function EditUserModal({ isOpen, onClose, onSubmit, userId }: EditUserMod
               type="email"
               required
               value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, email: e.target.value })
+              }
               className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
               placeholder="example@email.com"
             />
@@ -141,7 +141,9 @@ export function EditUserModal({ isOpen, onClose, onSubmit, userId }: EditUserMod
             <input
               type="tel"
               value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, phone: e.target.value })
+              }
               className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
               placeholder="99001122"
             />
@@ -153,9 +155,13 @@ export function EditUserModal({ isOpen, onClose, onSubmit, userId }: EditUserMod
             </label>
             <select
               value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value as 'admin' | 'user' })}
-              className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
-            >
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  role: e.target.value as "admin" | "user",
+                })
+              }
+              className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500">
               <option value="user">Хэрэглэгч</option>
               <option value="admin">Админ</option>
             </select>
@@ -167,9 +173,13 @@ export function EditUserModal({ isOpen, onClose, onSubmit, userId }: EditUserMod
             </label>
             <select
               value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
-              className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
-            >
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  status: e.target.value as "active" | "inactive",
+                })
+              }
+              className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500">
               <option value="active">Идэвхтэй</option>
               <option value="inactive">Идэвхгүй</option>
             </select>
@@ -179,15 +189,13 @@ export function EditUserModal({ isOpen, onClose, onSubmit, userId }: EditUserMod
             <button
               type="submit"
               disabled={isLoading}
-              className="flex-1 bg-yellow-500 text-black py-2 rounded-lg hover:bg-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-            >
-              {isLoading ? 'Хадгалж байна...' : 'Хадгалах'}
+              className="flex-1 bg-yellow-500 text-black py-2 rounded-lg hover:bg-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium">
+              {isLoading ? "Хадгалж байна..." : "Хадгалах"}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 bg-muted text-foreground py-2 rounded-lg hover:bg-muted/80 transition-colors"
-            >
+              className="flex-1 bg-muted text-foreground py-2 rounded-lg hover:bg-muted/80 transition-colors">
               Цуцлах
             </button>
           </div>

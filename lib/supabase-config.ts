@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { createSupabaseServer } from "./supabase-server";
 
 // Supabase configuration - ready for tomorrow's integration
 // This file contains the structure and setup needed for Supabase integration
@@ -132,12 +132,11 @@ SUPABASE INTEGRATION STEPS FOR TOMORROW:
 Current static data will be preserved until migration is complete.
 `;
 
-// Fetch all users
+// Fetch all users (server)
 export const fetchUsers = async () => {
-  const { data, error } = await supabase
-    .from("users")
-    .select("*")
-    .order("created_at", { ascending: false });
+  const supabase = createSupabaseServer();
+  const { data, error } = await supabase.from("users").select("*");
+  console.log("Fetched users:", data);
   if (error) {
     console.error("Error fetching users:", error);
     return [];
@@ -145,12 +144,14 @@ export const fetchUsers = async () => {
   return data;
 };
 
-// Fetch all brands
+// Fetch all brands (server)
 export const fetchBrands = async () => {
+  const supabase = createSupabaseServer();
   const { data, error } = await supabase
     .from("brands")
     .select("*")
     .order("created_at", { ascending: false });
+
   if (error) {
     console.error("Error fetching brands:", error);
     return [];
@@ -158,8 +159,9 @@ export const fetchBrands = async () => {
   return data;
 };
 
-// Fetch all products
+// Fetch all products (server)
 export const fetchProducts = async () => {
+  const supabase = createSupabaseServer();
   const { data, error } = await supabase
     .from("products")
     .select("*")
@@ -171,8 +173,9 @@ export const fetchProducts = async () => {
   return data;
 };
 
-// Fetch all orders
+// Fetch all orders (server)
 export const fetchOrders = async () => {
+  const supabase = createSupabaseServer();
   const { data, error } = await supabase
     .from("orders")
     .select("*")
@@ -184,8 +187,9 @@ export const fetchOrders = async () => {
   return data;
 };
 
-// Fetch all banners
+// Fetch all banners (server)
 export const fetchBanners = async () => {
+  const supabase = createSupabaseServer();
   const { data, error } = await supabase
     .from("banners")
     .select("*")
@@ -197,8 +201,9 @@ export const fetchBanners = async () => {
   return data;
 };
 
-// Fetch all settings
+// Fetch all settings (server)
 export const fetchSettings = async () => {
+  const supabase = createSupabaseServer();
   const { data, error } = await supabase
     .from("settings")
     .select("*")

@@ -1,29 +1,27 @@
-'use client';
+"use client";
 
-import { AdminSidebar } from '@/components/layout/admin-sidebar';
-import { useAuth } from '@/lib/auth-context';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { AdminSidebar } from "@/components/layout/admin-sidebar";
+import { useAuth } from "@/lib/auth-context";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
-function AdminLayoutContent({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const { state: authState } = useAuth();
+function AdminLayoutContent({ children }: { children: React.ReactNode }) {
+  const { user, profile } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!authState.isAuthenticated || authState.user?.role !== 'admin') {
-      router.push('/');
+    if (!user || profile?.role !== "admin") {
+      router.push("/");
     }
-  }, [authState, router]);
+  }, [user, router]);
 
-  if (!authState.isAuthenticated || authState.user?.role !== 'admin') {
+  if (!user || profile?.role !== "admin") {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-foreground mb-2">Хандах эрхгүй</h1>
+          <h1 className="text-2xl font-bold text-foreground mb-2">
+            Хандах эрхгүй
+          </h1>
           <p className="text-muted-foreground">Админ эрх шаардлагатай</p>
         </div>
       </div>
@@ -33,9 +31,7 @@ function AdminLayoutContent({
   return (
     <div className="min-h-screen bg-background">
       <AdminSidebar />
-      <main className="ml-64 p-6">
-        {children}
-      </main>
+      <main className="ml-64 p-6">{children}</main>
     </div>
   );
 }

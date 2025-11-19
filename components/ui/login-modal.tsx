@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { X, Eye, EyeOff } from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
+import { loginAction, registerAction } from "@/lib/auth";
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -11,45 +11,40 @@ interface LoginModalProps {
 }
 
 export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
-  const [mode, setMode] = useState<"login" | "register">("login"); // Added mode state
+  const [mode, setMode] = useState<"login" | "register">("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const { login, register } = useAuth();
+  const [isPending, startTransition] = useTransition();
 
   if (!isOpen) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setIsLoading(true);
 
-    try {
+    startTransition(async () => {
       if (mode === "login") {
-        const success = await login(email, password);
-        console.log(success);
-        if (!success) {
+        const result = await loginAction(email, password);
+
+        if (!result.success) {
           setError("И-мэйл эсвэл нууц үг буруу байна");
         } else {
-          onClose();
+          // onClose();
           onSuccess();
         }
       } else {
-        const { error } = await register(name, email, password);
-        if (error) {
+        const result = await registerAction(name, email, password);
+        if (!result.success) {
           setError("Бүртгэл үүсгэхэд алдаа гарлаа.");
         } else {
-          setError("Бүртгэл амжилттай үүслээ. Нэвтэрнэ үү.");
+          setError("Бүртгэл амжилттай. Та нэвтэрнэ үү.");
+          setMode("login");
         }
       }
-    } catch (err) {
-      setError("Алдаа гарлаа. Дахин оролдоно уу.");
-    }
-
-    setIsLoading(false);
+    });
   };
 
   return (
@@ -57,13 +52,11 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
       <div className="bg-card rounded-lg border border-border w-full max-w-md">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border">
-          <h2 className="text-xl font-semibold text-foreground">
+          <h2 className="text-xl font-semibold">
             {mode === "login" ? "Нэвтрэх" : "Бүртгүүлэх"}
           </h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-muted rounded-lg transition-colors">
-            <X size={20} className="text-muted-foreground" />
+          <button onClick={onClose} className="p-2 hover:bg-muted rounded-lg">
+            <X size={20} />
           </button>
         </div>
 
@@ -72,67 +65,58 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === "register" && (
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Нэр
-                </label>
+                <label className="block text-sm mb-2">Нэр</label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                  placeholder="Таны нэр"
+                  className="w-full px-3 py-2 border rounded-lg"
                   required
                 />
               </div>
             )}
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                И-мэйл хаяг
-              </label>
+              <label className="block text-sm mb-2">И-мэйл хаяг</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                placeholder="example@email.com"
+                className="w-full px-3 py-2 border rounded-lg"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Нууц үг
-              </label>
+              <label className="block text-sm mb-2">Нууц үг</label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-3 py-2 pr-10 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                  placeholder="••••••••"
+                  className="w-full px-3 py-2 pr-10 border rounded-lg text-black"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  className="absolute right-3 top-1/2 -translate-y-1/2">
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
 
             {error && (
-              <div className="text-red-500 text-sm bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+              <div className="text-red-500 text-sm bg-red-500/10 border border-red-500/20 p-3 rounded-lg">
                 {error}
               </div>
             )}
 
             <button
               type="submit"
-              disabled={isLoading}
-              className="w-full bg-yellow-500 text-black py-3 rounded-lg font-semibold hover:bg-yellow-400 disabled:bg-yellow-600 disabled:cursor-not-allowed transition-colors">
-              {isLoading
+              disabled={isPending}
+              className="w-full bg-yellow-500 py-3 rounded-lg font-semibold">
+              {isPending
                 ? mode === "login"
                   ? "Нэвтэрч байна..."
                   : "Бүртгэж байна..."
@@ -142,13 +126,13 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
             </button>
           </form>
 
-          <div className="text-center text-sm text-muted-foreground">
+          <div className="text-center text-sm">
             {mode === "login" ? (
               <>
                 Бүртгэл байхгүй юу?{" "}
                 <button
                   onClick={() => setMode("register")}
-                  className="text-yellow-500 hover:underline">
+                  className="text-yellow-500">
                   Бүртгүүлэх
                 </button>
               </>
@@ -157,7 +141,7 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
                 Аль хэдийн бүртгэлтэй юу?{" "}
                 <button
                   onClick={() => setMode("login")}
-                  className="text-yellow-500 hover:underline">
+                  className="text-yellow-500">
                   Нэвтрэх
                 </button>
               </>

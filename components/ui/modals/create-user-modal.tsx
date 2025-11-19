@@ -1,8 +1,7 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { X } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { useState } from "react";
+import { X } from "lucide-react";
 
 interface CreateUserModalProps {
   isOpen: boolean;
@@ -24,34 +23,26 @@ export function CreateUserModal({ isOpen, onClose, onSubmit }: CreateUserModalPr
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    if (!supabase) {
-      alert('Supabase тохиргоо хийгдээгүй байна. Статик өгөгдөл ашиглаж байна.');
-      setIsLoading(false);
-      return;
-    }
-    setError('');
-
+    setError("");
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .insert([formData])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      onSubmit(data);
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        role: 'user',
-        status: 'active'
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+        credentials: "same-origin",
       });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error || "Failed to create user");
+      }
+
+      const payload = await res.json();
+      onSubmit(payload.user);
+      setFormData({ name: "", email: "", phone: "", role: "user", status: "active" });
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Алдаа гарлаа');
+      setError(err.message || "Алдаа гарлаа");
     } finally {
       setIsLoading(false);
     }
