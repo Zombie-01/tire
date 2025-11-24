@@ -7,7 +7,8 @@ import {
   useEffect,
   ReactNode,
 } from "react";
-import { supabase } from "./supabase";
+// Auth no longer talks to Supabase directly from the client.
+// Use server endpoints under `/api/auth/*` instead.
 
 interface UserProfile {
   id: string;
@@ -36,85 +37,83 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null); // Profile from DB
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (id: string) => {
-    const { data } = await supabase
-      .from("users")
-      .select("id, name, email, role")
-      .eq("id", id)
-      .single();
-    return data as UserProfile | null;
+  const fetchSessionAndProfile = async () => {
+    try {
+      const res = await fetch("/api/auth/session", { cache: "no-store" });
+      if (!res.ok) return { session: null, profile: null };
+      return await res.json();
+    } catch (err) {
+      console.error(err);
+      return { session: null, profile: null };
+    }
   };
 
   useEffect(() => {
     let mounted = true;
 
     const init = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (session?.user && mounted) {
+      const { session, profile } = await fetchSessionAndProfile();
+      if (!mounted) return;
+      if (session?.user) {
         setUser(session.user);
-        const profileData = await fetchProfile(session.user.id);
-        setProfile(profileData);
+        setProfile(profile ?? null);
       }
-
       setLoading(false);
     };
 
     init();
 
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (!mounted) return;
-
-        if (event === "SIGNED_IN" && session?.user) {
-          setUser(session.user);
-          const profileData = await fetchProfile(session.user.id);
-          setProfile(profileData);
-        }
-
-        if (event === "SIGNED_OUT") {
-          setUser(null);
-          setProfile(null);
-        }
-      }
-    );
-
     return () => {
       mounted = false;
-      listener?.subscription.unsubscribe();
     };
   }, []);
 
   const login = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return !error;
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      if (!res.ok) return false;
+      const { session } = await res.json();
+      if (session?.user) {
+        setUser(session.user);
+        // refresh profile
+        const sp = await fetchSessionAndProfile();
+        setProfile(sp.profile ?? null);
+      }
+      return true;
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
   };
 
   const register = async (name: string, email: string, password: string) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { name } },
-    });
-
-    if (error) return { success: false, error: error.message };
-
-    if (data.user) {
-      await supabase
-        .from("users")
-        .insert([{ id: data.user.id, name, email, role: "user" }]);
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        return { success: false, error: body?.error };
+      }
+      return { success: true };
+    } catch (err) {
+      console.error(err);
+      return { success: false, error: "Unexpected error" };
     }
-
-    return { success: true };
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch (err) {
+      console.error(err);
+    }
     setUser(null);
     setProfile(null);
   };
