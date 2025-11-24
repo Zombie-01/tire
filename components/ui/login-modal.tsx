@@ -32,7 +32,6 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email, password }),
           });
-
           if (!res.ok) {
             setError("И-мэйл эсвэл нууц үг буруу байна");
             return;
