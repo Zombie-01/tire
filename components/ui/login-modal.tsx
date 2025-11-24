@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import { X, Eye, EyeOff } from "lucide-react";
-import { loginAction, registerAction } from "@/lib/auth";
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -27,21 +26,42 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
 
     startTransition(async () => {
       if (mode === "login") {
-        const result = await loginAction(email, password);
+        try {
+          const res = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password }),
+          });
 
-        if (!result.success) {
-          setError("И-мэйл эсвэл нууц үг буруу байна");
-        } else {
-          // onClose();
+          if (!res.ok) {
+            setError("И-мэйл эсвэл нууц үг буруу байна");
+            return;
+          }
+
+          // success
           onSuccess();
+        } catch (err) {
+          console.error(err);
+          setError("Нэвтрэх үед алдаа гарлаа");
         }
       } else {
-        const result = await registerAction(name, email, password);
-        if (!result.success) {
-          setError("Бүртгэл үүсгэхэд алдаа гарлаа.");
-        } else {
+        try {
+          const res = await fetch("/api/auth/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, email, password }),
+          });
+
+          if (!res.ok) {
+            setError("Бүртгэл үүсгэхэд алдаа гарлаа.");
+            return;
+          }
+
           setError("Бүртгэл амжилттай. Та нэвтэрнэ үү.");
           setMode("login");
+        } catch (err) {
+          console.error(err);
+          setError("Бүртгэл үүсгэхэд алдаа гарлаа.");
         }
       }
     });
